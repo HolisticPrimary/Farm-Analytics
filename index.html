@@ -147,27 +147,49 @@ b { font-weight: 600; }
 }
 .cover-title {
   font-family: 'Bai Jamjuree', sans-serif;
-  font-size: clamp(27px, 3.8vw, 42px); font-weight: 700;
-  color: var(--navy); line-height: 1.12; letter-spacing: -0.02em;
-  margin-bottom: 12px;
+  font-size: clamp(30px, 4.6vw, 52px);
+  font-weight: 700;
+  line-height: 1.26;
+  letter-spacing: -0.025em;
+  margin-bottom: 14px;
+  padding-bottom: 0.06em;
+  /* navy→blue gradient text, echoing the logo's two-tone wordmark */
+  background: linear-gradient(96deg, var(--navy) 0%, var(--navy-2) 46%, var(--blue) 108%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
   animation: riseIn .75s ease .28s both;
 }
 .cover-sub {
-  color: var(--ink-soft); font-size: 15.5px; max-width: 700px; margin-bottom: 22px;
+  font-family: 'IBM Plex Sans Thai', sans-serif;
+  color: var(--ink-soft);
+  font-size: clamp(14.5px, 1.5vw, 16.5px);
+  font-weight: 400;
+  line-height: 1.78;
+  letter-spacing: 0.004em;
+  max-width: 660px;
+  margin-bottom: 24px;
   animation: riseIn .75s ease .42s both;
 }
+.cover-sub b, .cover-sub strong { color: var(--navy); font-weight: 600; }
 @keyframes riseIn {
   from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .cover-badges {
-  display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+  display: flex; gap: 11px; flex-wrap: wrap; justify-content: center;
   animation: riseIn .75s ease .56s both;
 }
 .cover-badge {
-  background: rgba(255,255,255,.85); border: 1px solid var(--border-2);
-  border-radius: 999px; padding: 7px 16px;
-  font-size: 12.5px; font-weight: 600; color: var(--navy);
+  font-family: 'Bai Jamjuree', sans-serif;
+  background: rgba(255,255,255,.92);
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 13px; font-weight: 600;
+  letter-spacing: 0.005em;
+  color: var(--navy);
   box-shadow: var(--shadow-sm);
 }
 
