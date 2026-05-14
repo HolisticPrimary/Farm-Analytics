@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FarmSense · ระบบวิเคราะห์ฟาร์มไก่</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<header class="topbar mast">
+  <div class="wrap topbar-inner">
+    <div class="brand">
+      <img class="brand-logo" src="assets/logo.png" alt="Smart Chicken Farm">
+      <div class="brand-text">
+        <div class="brand-name">FarmSense</div>
+        <div class="brand-tag">ระบบวิเคราะห์ฟาร์มไก่</div>
+      </div>
+    </div>
+    <div class="topbar-meta">
+      <span class="ver-badge">v1.0</span>
+      <span id="header-date"></span>
+    </div>
+  </div>
+</header>
+
+<section class="cover">
+  <div class="cover-bg" aria-hidden="true">
+    <span class="blob blob-1"></span>
+    <span class="blob blob-2"></span>
+    <span class="blob blob-3"></span>
+  </div>
+  <div class="wrap cover-inner">
+    <div class="cover-logo-wrap">
+      <span class="logo-ring" aria-hidden="true"></span>
+      <img class="cover-logo" src="assets/logo.png" alt="Smart Chicken Farm — FarmSense">
+    </div>
+    <h1 class="cover-title">วิเคราะห์ฟาร์มไก่แบบครบวงจร</h1>
+    <p class="cover-sub">อัปโหลดใบหน้าเล้า Excel → คำนวณ mortality, FCR, อาหารตามเกณฑ์ฟาร์ม, กำไรต่อตัว, คะแนนความเสี่ยง และคำแนะนำอุณหภูมิ/แรงลม — ทำงานในเบราว์เซอร์ ไม่ส่งข้อมูลออกที่ใด</p>
+    <div class="cover-badges">
+      <span class="cover-badge">📊 8 มุมวิเคราะห์</span>
+      <span class="cover-badge">🔒 100% client-side</span>
+      <span class="cover-badge">📁 เก็บประวัติเทียบรอบ</span>
+    </div>
+  </div>
+</section>
+
+<main class="wrap">
+
+  <!-- ============ UPLOAD ============ -->
+  <section class="upload-section" id="upload-section">
+    <div class="upload-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".xlsx,.xls" multiple>
+      <div class="icon display">⤴</div>
+      <h3>ลากไฟล์ Excel มาวาง หรือคลิกเพื่อเลือก</h3>
+      <p>รองรับใบหน้าเล้าที่มีชีท <b>"ประมาณการไก่คงเหลือจับ"</b> · อัปโหลดได้หลายฟาร์มพร้อมกัน</p>
+      <div class="hint">.xlsx, .xls · สูงสุด 20 MB/ไฟล์</div>
+    </div>
+    <div class="file-list" id="fileList"></div>
+    <div id="uploadAlert"></div>
+  </section>
+
+  <!-- ============ DASHBOARD ============ -->
+  <div class="dashboard" id="dashboard">
+
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="overview">ภาพรวม <span class="count" id="cnt-overview"></span></button>
+      <button class="tab" data-tab="mortality">ตาย &amp; วิธีแก้ <span class="count" id="cnt-mortality"></span></button>
+      <button class="tab" data-tab="feed">อาหาร vs STD <span class="count" id="cnt-feed"></span></button>
+      <button class="tab" data-tab="fcr">FCR &amp; กำไร</button>
+      <button class="tab" data-tab="env">อุณหภูมิ &amp; ลม</button>
+      <button class="tab" data-tab="health">สุขภาพ &amp; เติบโต <span class="count" id="cnt-health"></span></button>
+      <button class="tab" data-tab="history">ประวัติ &amp; แนวโน้ม</button>
+      <button class="tab" data-tab="export">Export</button>
+    </div>
+
+    <!-- TAB: OVERVIEW -->
+    <div class="tab-content active" id="tab-overview">
+      <h2 class="sec"><span class="num">§ 01</span> ภาพรวม</h2>
+      <div class="sec-rule"></div>
+      <p class="lede" id="overview-lede"></p>
+      <div class="kpi-row" id="kpi-row"></div>
+      <h2 class="sec" style="font-size:18px"><span class="num">§ 01·a</span> เล้าที่ต้องดูวันนี้</h2>
+      <div class="sec-rule"></div>
+      <div id="risk-board"></div>
+      <h2 class="sec" style="font-size:18px; margin-top:24px"><span class="num">§ 01·b</span> เปรียบเทียบฟาร์ม</h2>
+      <div class="sec-rule"></div>
+      <div class="farms" id="farms-grid"></div>
+      <h2 class="sec" style="font-size:18px; margin-top:24px"><span class="num">§ 01·c</span> Heatmap ทุกเล้า</h2>
+      <div class="sec-rule"></div>
+      <div id="heatmap-container"></div>
+    </div>
+
+    <!-- TAB: MORTALITY -->
+    <div class="tab-content" id="tab-mortality">
+      <h2 class="sec"><span class="num">§ 02</span> วิเคราะห์ตาย &amp; วิธีแก้แต่ละเล้า</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">เรียงตาม %ตายสะสมสูงสุด · ระบุสาเหตุที่น่าจะเป็น (จาก source, density, daily pattern) + วิธีแก้เฉพาะเล้า</p>
+
+      <div class="card">
+        <h4>Pattern Analysis</h4>
+        <div class="card-sub">รูปแบบที่ data บอก — ใช้ตัดสินใจระยะกลาง</div>
+        <div id="pattern-source"></div>
+        <div id="pattern-density"></div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="mort-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="sortable" data-sort="farm">ฟาร์ม/เล้า</th>
+              <th class="sortable" data-sort="age">อายุ</th>
+              <th class="sortable" data-sort="pct">%ตาย</th>
+              <th class="sortable" data-sort="death_day">ตายวันนี้</th>
+              <th class="sortable" data-sort="density">หนาแน่น</th>
+              <th>Priority / สาเหตุ</th>
+              <th>วิธีแก้</th>
+            </tr>
+          </thead>
+          <tbody id="mort-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: FEED -->
+    <div class="tab-content" id="tab-feed">
+      <h2 class="sec"><span class="num">§ 03</span> อาหารแต่ละเล้า vs เกณฑ์ฟาร์ม</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">เทียบ g/ตัว/วัน จริง กับ <b>เกณฑ์อาหารของฟาร์ม</b> (ไฟล์เกณฑ์.xlsx) เป็นหลัก · Ross 308 แสดงเป็นตัวเทียบรอง · เล้า CRITICAL ที่กินน้อย &gt;20% มักเป็นไก่ป่วย</p>
+
+      <div class="kpi-row" id="feed-kpi"></div>
+
+      <div class="table-wrap">
+        <table id="feed-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th class="sortable" data-sort="farm">ฟาร์ม/เล้า</th>
+              <th class="sortable" data-sort="age">อายุ</th>
+              <th class="sortable" data-sort="qty">ไก่คงเหลือ</th>
+              <th>อาหาร/วัน (kg)</th>
+              <th>g/ตัว/วัน</th>
+              <th>เกณฑ์ฟาร์ม (g)<br><small>/ Ross 308</small></th>
+              <th class="sortable" data-sort="dev">ส่วนต่าง<br><small>/ vs Ross</small></th>
+              <th>สถานะ</th>
+              <th>คำแนะนำ</th>
+            </tr>
+          </thead>
+          <tbody id="feed-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB: FCR & PROFIT -->
+    <div class="tab-content" id="tab-fcr">
+      <h2 class="sec"><span class="num">§ 04</span> FCR &amp; การคำนวณกำไร</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">ปรับค่าราคา → ระบบคำนวณ break-even FCR และ profit matrix ทันที</p>
+
+      <div class="card">
+        <h4>ค่ามาตรฐานในการคำนวณ <span style="font-size:11px; color:var(--ink-mute); font-weight:400; letter-spacing:0.05em">(แก้ได้ทันที)</span></h4>
+        <div class="input-grid">
+          <div class="input-group">
+            <label>ราคาขาย Live (บาท/kg)</label>
+            <input type="number" id="price-sale" value="42" step="0.5" min="20" max="100">
+          </div>
+          <div class="input-group">
+            <label>ราคาลูกไก่ (บาท/ตัว)</label>
+            <input type="number" id="price-chick" value="18" step="0.5" min="5" max="50">
+          </div>
+          <div class="input-group">
+            <label>ราคาอาหาร PPF (บาท/kg)</label>
+            <input type="number" id="price-feed" value="19" step="0.5" min="10" max="40">
+          </div>
+          <div class="input-group">
+            <label>ค่าจัดการ (บาท/ตัว/รุ่น)</label>
+            <input type="number" id="price-opex" value="4" step="0.5" min="0" max="20">
+          </div>
+        </div>
+      </div>
+
+      <div class="kpi-row" id="fcr-kpi"></div>
+
+      <div class="card">
+        <h4>4A · ตาราง Sensitivity · กำไรต่อตัว (บาท) ตาม FCR × น้ำหนักจับ</h4>
+        <div class="card-sub">สีเขียว = กำไรดี · สีเหลือง = กำไรพอใช้ · สีแดง = ใกล้/ขาดทุน · สีแดงทึบ = ขาดทุนแน่นอน</div>
+        <div class="table-wrap">
+          <table id="sens-table"></table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>4B · ตารางมาตรฐาน Ross 308</h4>
+        <div class="card-sub">น้ำหนักตัว, อาหาร, FCR ตามอายุ — ใช้เป็น reference</div>
+        <div class="table-wrap">
+          <table id="ross-table">
+            <thead>
+              <tr><th>อายุ (วัน)</th><th>BW (kg)</th><th>อาหาร/วัน (g)</th><th>อาหารสะสม (kg)</th><th>FCR สะสม</th><th>ADG (g/วัน)</th></tr>
+            </thead>
+            <tbody id="ross-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>4C · กำไรประมาณการรายฟาร์ม</h4>
+        <div class="card-sub">สมมติ FCR &amp; น้ำหนักตามฟาร์ม · ใช้เป็น estimate</div>
+        <div id="farm-profit"></div>
+      </div>
+    </div>
+
+    <!-- TAB: ENVIRONMENT -->
+    <div class="tab-content" id="tab-env">
+      <h2 class="sec"><span class="num">§ 05</span> อุณหภูมิ &amp; แรงลม ตามอายุ</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">เกณฑ์ของฟาร์ม (ไฟล์เกณฑ์.xlsx) เป็นหลัก — อุณหภูมิเป้า + ความเร็วลมรายวัน · Ross 308 เป็นตัวเทียบรอง</p>
+
+      <div class="card">
+        <h4>5A · เกณฑ์อุณหภูมิ &amp; ความเร็วลม รายวัน (เกณฑ์ฟาร์ม)</h4>
+        <div class="card-sub">อุณหภูมิเป้าหมายลดลง ~0.3°C/วัน · ความเร็วลมเพิ่มตามอายุ · ปั๊มแพดเปิดเมื่ออุณหภูมิถึงค่าที่กำหนด</div>
+        <div class="table-wrap" style="max-height: 360px; overflow-y: auto">
+          <table id="farm-temp-table">
+            <thead>
+              <tr>
+                <th>วันที่</th><th>อุณหภูมิเป้า (°C)</th><th>ความเร็วลม (FPM)</th>
+                <th>≈ m/s</th><th>ปั๊มแพดเปิดที่ (°C)</th>
+              </tr>
+            </thead>
+            <tbody id="farm-temp-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>5B · สัญญาณเตือนตามช่วงอายุ <span style="font-size:11px; color:var(--ink-mute); font-weight:400">(อ้างอิง Ross 308 + งานวิจัย)</span></h4>
+        <div class="table-wrap">
+          <table id="env-table">
+            <thead><tr><th>ช่วงอายุ</th><th>สัญญาณเตือนที่ต้องสังเกต</th></tr></thead>
+            <tbody id="env-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>5C · Wind Chill Calculator</h4>
+        <div class="card-sub">เลือกอายุไก่ → ระบบบอกแรงลมที่ต้องใช้เพื่อให้ถึงอุณหภูมิเป้าตามเกณฑ์ฟาร์ม</div>
+        <div class="input-grid" style="grid-template-columns: 1fr 1fr">
+          <div class="input-group">
+            <label>อายุไก่ (วัน)</label>
+            <input type="range" id="age-slider" min="1" max="42" value="35" step="1" style="height: 36px">
+            <div class="unit" id="age-display" style="font-family:'JetBrains Mono',monospace; font-weight:600; font-size:14px; color:var(--ink)">35 วัน</div>
+          </div>
+          <div class="input-group">
+            <label>อุณหภูมิอากาศปัจจุบัน (°C)</label>
+            <input type="number" id="ambient-temp" value="30" step="0.5" min="15" max="40">
+          </div>
+        </div>
+        <div id="wind-recommendation"></div>
+      </div>
+
+      <div class="card">
+        <h4>5D · ฟาร์มแต่ละแห่ง · คำแนะนำเฉพาะอายุ</h4>
+        <div id="farm-env-recos"></div>
+      </div>
+
+      <div class="card">
+        <h4>5E · เกณฑ์อ้างอิงอื่นๆ (จากไฟล์เกณฑ์)</h4>
+        <div id="env-reference"></div>
+      </div>
+    </div>
+
+    <!-- TAB: HEALTH & GROWTH -->
+    <div class="tab-content" id="tab-health">
+      <h2 class="sec"><span class="num">§ 07</span> สุขภาพรายวัน &amp; การเติบโต</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">ข้อมูลที่ดึงเพิ่มจากใบหน้าเล้า — น้ำ:อาหาร, แยกตายจริง/คัด, รูปแบบเช้า/เย็น, น้ำหนักจริงเทียบ Ross 308, อาหารหก/สูญเปล่า</p>
+
+      <div class="kpi-row" id="health-kpi"></div>
+
+      <div class="card">
+        <h4>7A · อัตราส่วน น้ำ : อาหาร</h4>
+        <div class="card-sub">มาตรฐาน 1.5–2.4 · ต่ำ = ไก่ดื่มน้ำน้อย (อาจป่วย) · สูง = heat stress / ท้องเสีย — สัญญาณเตือนเบอร์ 1</div>
+        <div class="table-wrap">
+          <table id="water-table">
+            <thead>
+              <tr>
+                <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
+                <th>น้ำ (ล.)</th><th>อาหาร (kg)</th><th>น้ำ:อาหาร</th>
+                <th>สถานะ</th><th>คำแนะนำ</th>
+              </tr>
+            </thead>
+            <tbody id="water-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>7B · แยก "ตายจริง" vs "คัด" + รูปแบบ เช้า/เย็น</h4>
+        <div class="card-sub">คัด = การจัดการเชิงรุก (ดี) · ตายจริง = สูญเสียคุมไม่ได้ (แย่) · ตายเย็นเยอะ = heat stress</div>
+        <div class="table-wrap">
+          <table id="cull-table">
+            <thead>
+              <tr>
+                <th>#</th><th>ฟาร์ม/เล้า</th><th>ตายจริง</th><th>คัด</th>
+                <th>%คัด</th><th>เช้า</th><th>เย็น</th><th>รูปแบบ</th>
+              </tr>
+            </thead>
+            <tbody id="cull-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>7C · น้ำหนักจริง เทียบ Ross 308 standard</h4>
+        <div class="card-sub">เทียบน้ำหนักชั่งจริงกับมาตรฐานตามอายุ — ต่ำกว่าเกณฑ์ = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
+        <div class="table-wrap">
+          <table id="weight-table">
+            <thead>
+              <tr>
+                <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
+                <th>น.น.จริง (kg)</th><th>Ross 308 (kg)</th><th>ส่วนต่าง</th><th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="weight-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>7D · อาหารหก/สูญเปล่า (ลงสะสม vs กินสะสม)</h4>
+        <div class="card-sub">ช่องว่างระหว่าง %อาหารที่ลงเล้า กับ %อาหารที่ไก่กินจริง = อาหารที่ไม่ถึงปากไก่ (เงินรั่ว)</div>
+        <div class="table-wrap">
+          <table id="waste-table">
+            <thead>
+              <tr>
+                <th>#</th><th>ฟาร์ม/เล้า</th><th>%อาหารลงสะสม</th>
+                <th>%อาหารกินสะสม</th><th>ช่องว่าง</th><th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="waste-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: HISTORY & TREND -->
+    <div class="tab-content" id="tab-history">
+      <h2 class="sec"><span class="num">§ 08</span> ประวัติ &amp; แนวโน้ม</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">ทุกครั้งที่อัปโหลดไฟล์ ระบบบันทึก snapshot ไว้ในเบราว์เซอร์อัตโนมัติ — เทียบรอบต่อรอบ, ดูแนวโน้ม %ตาย และความเร็วการตายข้ามวัน · ข้อมูลไม่ออกจากเครื่อง</p>
+      <div id="history-board"></div>
+    </div>
+
+    <!-- TAB: EXPORT -->
+    <div class="tab-content" id="tab-export">
+      <h2 class="sec"><span class="num">§ 06</span> Export ข้อมูล</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">ดาวน์โหลดผลวิเคราะห์ในหลายรูปแบบ — ใช้พิมพ์, ส่งเมล, หรือนำเข้า BI tool</p>
+
+      <div class="card">
+        <h4>เลือกรูปแบบ</h4>
+        <div class="export-grid">
+          <button class="export-btn" onclick="window.print()">🖨 พิมพ์ / Save as PDF</button>
+          <button class="export-btn sec" id="exp-json">⬇ JSON ทั้งหมด</button>
+          <button class="export-btn sec" id="exp-mort-csv">⬇ Mortality CSV</button>
+          <button class="export-btn sec" id="exp-feed-csv">⬇ Feed CSV</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>คู่มือใช้งาน</h4>
+        <ol style="padding-left: 20px; font-size: 13px; line-height: 1.8;">
+          <li><b>เปิดเบราว์เซอร์</b> (Chrome, Edge, Safari, Firefox ใช้ได้หมด)</li>
+          <li><b>ลากไฟล์ใบหน้าเล้า .xlsx</b> มาวางในกล่อง upload — ทำได้ทีละหลายไฟล์</li>
+          <li><b>ระบบจะตรวจชีท "ประมาณการไก่คงเหลือจับ"</b> โดยอัตโนมัติและ parse ข้อมูล</li>
+          <li><b>คลิกแท็บ</b> ตามที่ต้องการดู — ทุกอย่างคำนวณใน browser ของอาร์มเอง ไม่มีการส่งข้อมูลไป server</li>
+          <li><b>ปรับค่าราคา</b> ในแท็บ FCR &amp; กำไร → matrix จะ recompute ทันที</li>
+          <li><b>Export</b> → คลิก "พิมพ์/Save as PDF" หรือดาวน์โหลด CSV/JSON</li>
+        </ol>
+      </div>
+
+      <div class="card dark">
+        <h4>Privacy &amp; Security</h4>
+        <div style="font-size:13px; line-height:1.7">
+          <b style="color:var(--gold-soft)">100% client-side</b> — ข้อมูลใบหน้าเล้าของคุณไม่เคยถูกอัปโหลดไป server ที่ไหน<br>
+          <b style="color:var(--gold-soft)">No tracking</b> — ไม่มี analytics, cookies, หรือ external requests (ยกเว้น fonts.googleapis สำหรับฟอนต์)<br>
+          <b style="color:var(--gold-soft)">Open source</b> — ดู source code ได้จาก View Source (Ctrl+U)
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer class="colophon">
+    <span>FarmSense · ระบบวิเคราะห์ฟาร์มไก่</span>
+    <span>เปิดในเบราว์เซอร์ทุกตัว · ทำงาน 100% client-side</span>
+  </footer>
+
+</main>
+
+<!-- ====== Application scripts (load order matters) ====== -->
+<script src="js/constants.js"></script>
+<script src="js/state.js"></script>
+<script src="js/ui-helpers.js"></script>
+<script src="js/analyzers.js"></script>
+<script src="js/schema-map.js"></script>
+<script src="js/history.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/render.js"></script>
+<script src="js/render-health.js"></script>
+<script src="js/render-history.js"></script>
+<script src="js/exports.js"></script>
+<script src="js/main.js"></script>
+
+</body>
+</html>

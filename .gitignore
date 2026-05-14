@@ -1,0 +1,17 @@
+# Real farm data — never commit (sensitive production data)
+*.xlsx
+*.xls
+
+# Superseded originals — the project now lives in farmsense/ + farmsense.html
+/FarmSense-วิเคราะห์ฟาร์มไก่.html
+/logo.png
+
+# Dependencies & build tooling
+node_modules/
+package-lock.json
+
+# Local editor / preview config
+.claude/
+
+# OS
+.DS_Store

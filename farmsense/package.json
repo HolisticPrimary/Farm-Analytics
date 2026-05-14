@@ -1,0 +1,14 @@
+{
+  "name": "farmsense",
+  "version": "1.0.0",
+  "description": "ระบบวิเคราะห์ฟาร์มไก่ — client-side Excel analyzer",
+  "private": true,
+  "scripts": {
+    "build": "bash build.sh",
+    "test": "node test-parse.js",
+    "verify": "node verify.js"
+  },
+  "devDependencies": {
+    "xlsx": "0.18.5"
+  }
+}
