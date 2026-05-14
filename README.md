@@ -6,6 +6,8 @@
 A fully client-side broiler-farm analytics tool. Upload the daily Excel
 "face sheet" and it computes everything in the browser — no server, no upload.
 
+**🌐 ใช้งานจริง / Live:** https://holisticprimary.github.io/Farm-Analytics/
+
 ## คุณสมบัติ
 
 | แท็บ | วิเคราะห์ |

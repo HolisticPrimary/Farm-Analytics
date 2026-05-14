@@ -58,7 +58,11 @@ inline_script = f"<script>\n{js_blob}\n</script>"
 html, n = scripts_pattern.subn(lambda m: inline_script, html)
 assert n == 1, f"Expected 1 script-block match, got {n}"
 
-out = Path("../farmsense.html")
-out.write_text(html, encoding="utf-8")
-print(f"✓ Bundled: {out.resolve()} ({out.stat().st_size:,} bytes)")
+# Write the bundle to two places:
+#   ../farmsense.html  — the familiar "double-click to open" file
+#   ../index.html      — repo-root entry point so GitHub Pages serves the app
+for name in ("../farmsense.html", "../index.html"):
+    Path(name).write_text(html, encoding="utf-8")
+size = Path("../index.html").stat().st_size
+print(f"✓ Bundled: farmsense.html + index.html ({size:,} bytes)")
 PY
