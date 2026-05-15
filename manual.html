@@ -392,6 +392,40 @@
   เลือกสีตามความรุนแรง — <b>ไล่จากเขียว (ดี) → เหลือง → ส้ม → แดง (วิกฤต)</b>
   ใช้สแกนรวดเดียวหาเล้าที่สีแดงแสบตา</p>
 
+<h3>การอ่านแต่ละช่อง</h3>
+<p>แต่ละช่องของ Heatmap แสดงข้อมูลสำคัญ 3 อย่าง:</p>
+
+<div class="callout example" style="page-break-inside:avoid">
+  <span class="tag">ตัวอย่างจริง · ฟาร์มพีพฟู้ดชัยนาท เล้า 1</span>
+  <p>บนหน้าจอจะเห็นช่องนี้ (พื้นสีเหลือง-เขียวอ่อน):</p>
+  <div style="display:flex; align-items:center; gap:18pt; margin:8pt 0; page-break-inside:avoid">
+    <div style="display:inline-block; background:#f0f4d9; border:2px solid #d8e0a8; border-radius:8px; padding:9pt 16pt; min-width:110pt; text-align:left">
+      <div style="font-family:'Bai Jamjuree',sans-serif; font-size:9pt; color:#7a7a7a; text-transform:uppercase; letter-spacing:0.04em; font-weight:600">เล้า 1</div>
+      <div style="font-family:'Bai Jamjuree',sans-serif; font-size:22pt; font-weight:700; color:#7a8a25; line-height:1.1; margin:2pt 0">2.49%</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:9pt; color:#888">1,002 / 40.3k</div>
+    </div>
+    <div style="flex:1; font-size:10.5pt">
+      <div style="margin-bottom:4pt"><b>เล้า 1</b> → หมายเลขเล้า</div>
+      <div style="margin-bottom:4pt"><b>2.49%</b> → %ตายสะสม</div>
+      <div style="margin-bottom:4pt"><b>1,002 / 40.3k</b> → ตาย 1,002 ตัว จากที่ลง 40,300 ตัว</div>
+      <div><b>สีเหลือง-เขียวอ่อน</b> → กลุ่ม 1.5–2.5% (เริ่มสูงเล็กน้อย)</div>
+    </div>
+  </div>
+  <p style="margin-top:6pt"><b>ที่มาของ 2.49%:</b></p>
+  <div class="formula" style="margin:6pt 0">%ตายสะสม = 1,002 ÷ 40,290 × 100 = 2.487%
+                ≈ 2.49% (ปัดทศนิยม)</div>
+</div>
+
+<div class="callout action">
+  <span class="tag">วิธีใช้ Heatmap ในชีวิตประจำวัน</span>
+  <ol style="margin:4pt 0 0 20pt">
+    <li>เปิดแท็บ "ภาพรวม" → เลื่อนลงมาด้านล่างสุด</li>
+    <li><b>สแกนหาช่องสีแดงก่อน</b> — เล้าวิกฤต (%ตาย ≥ 4%) ต้องลงพื้นที่เดี๋ยวนี้</li>
+    <li>เลื่อนเมาส์บนช่อง → tooltip โชว์รายละเอียด (ที่มาลูกไก่, density, ตายสะสม)</li>
+    <li>คลิกแท็บ "ตาย &amp; วิธีแก้" หาเล้านั้นเพื่อดูสาเหตุ + วิธีแก้</li>
+  </ol>
+</div>
+
 <!-- ============ CH 4 ============ -->
 <h1 class="chapter"><span class="num">4</span>%ตายสะสม — ตัวเลขที่สำคัญที่สุด</h1>
 
