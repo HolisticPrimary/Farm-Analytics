@@ -33,6 +33,7 @@ function renderDashboard() {
   renderEnv(farmKeys);
   renderHealth(farmKeys);
   renderAlerts(farmKeys);
+  renderAnalysis(farmKeys);
 }
 
 // ========== RISK BOARD · "เล้าที่ต้องดูวันนี้" ==========

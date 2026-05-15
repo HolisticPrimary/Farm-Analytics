@@ -225,6 +225,84 @@ function buildHouses(rows, headerIdx, colMap) {
   return houses;
 }
 
+// ====================================================================
+// Daily history parser — pulls day-by-day metrics out of the H 1..H N
+// per-house sheets. All four reference templates share the same column
+// layout: B=day, C=date, F=feed used, L/M=temp lo/hi, N=humidity,
+// P=water, Q/R=morning died/culled, S/T=evening died/culled,
+// U=total death, V=total cull, Z=remaining, AA=weight, AB=FCR.
+// Returns { 1: [{day,...}, {day,...}], 2: [...], ... }.
+// ====================================================================
+function parseHouseDailyHistory(workbook) {
+  const histories = {};
+  const hSheets = workbook.SheetNames.filter(n => /^\s*H\s*\d+\s*$/i.test(n));
+  for (const name of hSheets) {
+    const m = name.match(/H\s*(\d+)/i);
+    if (!m) continue;
+    const houseNum = parseInt(m[1], 10);
+    const sheet = workbook.Sheets[name];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+    // Find the header row — first row containing both 'อายุไก่' and 'วันที่'.
+    let hidx = -1;
+    for (let i = 0; i < Math.min(rows.length, 12); i++) {
+      const t = rowToText(rows[i]);
+      if (t.includes('อายุไก่') && t.includes('วันที่')) { hidx = i; break; }
+    }
+    if (hidx < 0) continue;
+
+    // Data rows live below the merged sub-header (skip 2 rows).
+    const daily = [];
+    for (let r = hidx + 2; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const day = row[1];
+      if (typeof day !== 'number') continue;
+      const totalDeath = parseNumeric(row[20]);
+      const totalCull  = parseNumeric(row[21]);
+      const totalLoss  = parseNumeric(row[22]);
+      const remaining  = parseNumeric(row[25]);
+      const weight     = parseNumeric(row[26]);
+      const fcr        = parseNumeric(row[27]);
+      const tempLo     = parseNumeric(row[11]);
+      const tempHi     = parseNumeric(row[12]);
+      const humidity   = parseNumeric(row[13]);
+      const water      = parseNumeric(row[15]);
+      const feedUsed   = parseNumeric(row[5]);
+      const feedStdG   = parseNumeric(row[7]);
+      // A row is "live" only if the operator actually filled in
+      // operational data. The template often pre-fills qty_rem via a
+      // formula and pre-zeros death/cull, so we look at date + the
+      // measured columns (temp, water, weight, feed_used) that have to
+      // be typed by hand.
+      const hasOperatorData = (row[2] != null && row[2] !== '') ||
+        [tempLo, tempHi, water, feedUsed, weight].some(v => v != null && v !== 0);
+      if (!hasOperatorData) continue;
+      daily.push({
+        day: Math.floor(day),
+        date: row[2],
+        m_died:    parseNumeric(row[16]) || 0,
+        m_culled:  parseNumeric(row[17]) || 0,
+        e_died:    parseNumeric(row[18]) || 0,
+        e_culled:  parseNumeric(row[19]) || 0,
+        total_death: totalDeath || 0,
+        total_cull:  totalCull  || 0,
+        total_loss:  totalLoss  || 0,
+        qty_rem:    remaining,
+        weight,
+        fcr,
+        temp_lo:    tempLo,
+        temp_hi:    tempHi,
+        humidity,
+        water,
+        feed_used:  feedUsed,
+        feed_std_g: feedStdG,
+      });
+    }
+    if (daily.length > 0) histories[houseNum] = daily;
+  }
+  return histories;
+}
+
 async function parseExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -260,6 +338,19 @@ async function parseExcelFile(file) {
         if (houses.length === 0) {
           reject(new Error('ไม่พบข้อมูลเล้า — ตรวจสอบ format ของไฟล์'));
           return;
+        }
+
+        // Attach per-house daily history from H 1..H N sheets when available.
+        // The template usually pre-fills the H-sheet forward with formulas
+        // (date serials, zeroed totals, sometimes garbage water values), so
+        // truncate to the face sheet's reported current age — that's the
+        // source of truth for "what's been recorded so far".
+        const histories = parseHouseDailyHistory(workbook);
+        for (const h of houses) {
+          const num = Number(h.house);
+          let hist = Number.isFinite(num) ? (histories[num] || null) : null;
+          if (hist && h.age != null) hist = hist.filter(d => d.day <= h.age);
+          h.dailyHistory = hist && hist.length > 0 ? hist : null;
         }
 
         const info = extractFarmInfo(rows, file.name);

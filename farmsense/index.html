@@ -70,12 +70,13 @@
     <div class="tabs" id="tabs">
       <button class="tab active" data-tab="overview">ภาพรวม <span class="count" id="cnt-overview"></span></button>
       <button class="tab" data-tab="alerts">ภาพรวมรายวัน <span class="count" id="cnt-alerts"></span></button>
+      <button class="tab" data-tab="analysis">🔍 วิเคราะห์เล้า <span class="count" id="cnt-analysis"></span></button>
       <button class="tab" data-tab="mortality">ตาย &amp; วิธีแก้ <span class="count" id="cnt-mortality"></span></button>
       <button class="tab" data-tab="feed">อาหาร vs STD <span class="count" id="cnt-feed"></span></button>
       <button class="tab" data-tab="env">อุณหภูมิ &amp; ลม</button>
       <button class="tab" data-tab="health">สุขภาพ &amp; เติบโต <span class="count" id="cnt-health"></span></button>
-      <button class="tab" data-tab="history">ประวัติ &amp; แนวโน้ม</button>
       <button class="tab" data-tab="export">Export</button>
+      <button class="tab" data-tab="settings">⚙ ตั้งค่า</button>
     </div>
 
     <!-- TAB: OVERVIEW -->
@@ -94,6 +95,20 @@
       <h2 class="sec" style="font-size:18px; margin-top:24px"><span class="num">§ 01·c</span> Heatmap ทุกเล้า</h2>
       <div class="sec-rule"></div>
       <div id="heatmap-container"></div>
+    </div>
+
+    <!-- TAB: PER-HOUSE ANALYSIS -->
+    <div class="tab-content" id="tab-analysis">
+      <h2 class="sec"><span class="num">§ 03</span> 🔍 วิเคราะห์เล้า — แนวโน้ม day-by-day</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">เลือกเล้าเพื่อดู<b>แนวโน้มทุก KPI ตลอดรุ่น</b> · ดึงจากชีท H 1...H N (ข้อมูลรายวัน) · จุดสีแดงคือวันที่ผิดปกติ</p>
+
+      <div class="card analysis-picker">
+        <h4>เลือกเล้าที่จะวิเคราะห์</h4>
+        <div id="analysis-house-picker"></div>
+      </div>
+
+      <div id="analysis-content"></div>
     </div>
 
     <!-- TAB: MORTALITY -->
@@ -322,12 +337,75 @@
       <div id="disease-watch"></div>
     </div>
 
-    <!-- TAB: HISTORY & TREND -->
-    <div class="tab-content" id="tab-history">
-      <h2 class="sec"><span class="num">§ 08</span> ประวัติ &amp; แนวโน้ม</h2>
+    <!-- TAB: SETTINGS · Google Sheets sync -->
+    <div class="tab-content" id="tab-settings">
+      <h2 class="sec"><span class="num">§ 10</span> ตั้งค่า · เชื่อม Google Sheets</h2>
       <div class="sec-rule"></div>
-      <p class="lede">ทุกครั้งที่อัปโหลดไฟล์ ระบบบันทึก snapshot ไว้ในเบราว์เซอร์อัตโนมัติ — เทียบรอบต่อรอบ, ดูแนวโน้ม %ตาย และความเร็วการตายข้ามวัน · ข้อมูลไม่ออกจากเครื่อง</p>
-      <div id="history-board"></div>
+      <p class="lede">เชื่อมต่อ Google Sheet เพื่อเก็บประวัติข้ามวัน · กราฟที่ publish จาก Sheets จะแสดงด้านล่างเพื่อตรวจสอบทันที</p>
+
+      <!-- Step 1 — Web App URL -->
+      <div class="card">
+        <h4>1️⃣ Web App URL (Apps Script) <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· รับข้อมูลที่อัปโหลด → append เข้า Sheet</span></h4>
+        <div class="input-group" style="margin-top:8px">
+          <label>วาง URL ที่ได้จาก "Deploy → Web app"</label>
+          <input type="url" id="sheets-webhook-url" placeholder="https://script.google.com/macros/s/AKfy.../exec">
+        </div>
+        <div class="sync-status" id="sheets-sync-status"></div>
+        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap">
+          <button class="modal-btn primary" id="sheets-save-btn">บันทึก</button>
+          <button class="modal-btn" id="sheets-test-btn">🔬 ทดสอบการเชื่อมต่อ</button>
+          <button class="modal-btn ghost" id="sheets-sync-all-btn">↻ Sync ฟาร์มที่โหลดอยู่ทั้งหมด</button>
+        </div>
+      </div>
+
+      <!-- Step 2 — Chart URL -->
+      <div class="card">
+        <h4>2️⃣ URL กราฟจาก Google Sheets <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· ฝังมาแสดงด้านล่าง</span></h4>
+        <div class="input-group" style="margin-top:8px">
+          <label>ใน Sheet: คลิกกราฟ → ⋮ → Publish chart → Copy URL หรือ iframe</label>
+          <input type="url" id="sheets-chart-url" placeholder="https://docs.google.com/spreadsheets/d/.../pubchart?oid=...">
+        </div>
+        <div class="card-sub" style="margin-top:8px">วางได้ทั้ง URL ตรงๆ หรือโค้ด <code>&lt;iframe ...&gt;</code> เต็มๆ — ระบบจะดึง src ให้เอง</div>
+      </div>
+
+      <!-- Chart preview / embed -->
+      <div id="sheets-chart-embed"></div>
+
+      <!-- Step 3 — Apps Script template -->
+      <div class="card">
+        <h4>3️⃣ โค้ด Apps Script <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· paste ใน Sheet → Extensions → Apps Script</span></h4>
+        <div class="card-sub" style="margin-bottom:8px">เปิด Google Sheet ใหม่ → Extensions → Apps Script → ลบของเดิม → paste โค้ดนี้ → Save → Deploy → Web app</div>
+        <pre id="apps-script-code" class="code-block">กำลังโหลด...</pre>
+        <button class="modal-btn" id="apps-script-copy-btn">📋 Copy โค้ดทั้งหมด</button>
+      </div>
+
+      <!-- Setup walkthrough -->
+      <div class="card">
+        <h4>📖 ขั้นตอนการตั้งค่า (ทำครั้งเดียว ~10 นาที)</h4>
+        <ol class="setup-steps">
+          <li><b>สร้าง Google Sheet ใหม่</b> ตั้งชื่อ เช่น "ประวัติฟาร์ม"</li>
+          <li><b>เปิด Apps Script:</b> เมนู Extensions → Apps Script</li>
+          <li><b>Paste โค้ด</b> จากกล่องข้างบน → กด Save (💾)</li>
+          <li><b>Deploy:</b> Deploy → New deployment → Type: <b>Web app</b><br>
+            <small>Execute as: Me · Who has access: <b>Anyone</b> → Deploy → Authorize</small></li>
+          <li><b>Copy Web app URL</b> → วางในกล่อง 1️⃣ ข้างบน → กดบันทึก</li>
+          <li><b>ทดสอบเชื่อมต่อ</b> ด้วยปุ่ม 🔬 (ควรเห็น "Sync ล่าสุดสำเร็จ")</li>
+          <li><b>อัปโหลดใบหน้าเล้าทดสอบ</b> → ดูใน Sheet ว่ามีแถวเพิ่ม</li>
+          <li><b>ทำกราฟใน Sheet</b> (Insert → Chart) ตามใจ</li>
+          <li><b>Publish กราฟ:</b> คลิกกราฟ → ⋮ → Publish chart → Copy URL</li>
+          <li><b>วาง URL กราฟ</b> ในกล่อง 2️⃣ → กดบันทึก → กราฟปรากฏด้านล่างทันที</li>
+        </ol>
+      </div>
+
+      <div class="card dark">
+        <h4>🔒 ความปลอดภัย &amp; ข้อจำกัด</h4>
+        <div style="font-size:13px; line-height:1.8">
+          <b style="color:var(--gold-soft)">URL ลับ:</b> Web app URL ของ Apps Script ยาวและสุ่ม คนภายนอกเดาไม่ได้ ปลอดภัยพอสำหรับฟาร์มทั่วไป<br>
+          <b style="color:var(--gold-soft)">เพิ่มความปลอดภัย:</b> ในโค้ด Apps Script ใส่ค่า <code>SECRET</code> (ตอนนี้ <i>FarmSense ยังไม่ส่ง secret — ใส่ '' ไว้ก่อน</i>)<br>
+          <b style="color:var(--gold-soft)">ข้อมูลที่ส่ง:</b> KPI สำคัญต่อเล้า (เล้า, อายุ, ตาย, อาหาร, น้ำ, น้ำหนัก) ไม่ส่งไฟล์ Excel ดิบ<br>
+          <b style="color:var(--gold-soft)">localStorage:</b> URL เก็บใน browser นี้เท่านั้น — ใช้คนละเครื่องต้องตั้งค่าใหม่
+        </div>
+      </div>
     </div>
 
     <!-- TAB: EXPORT -->
@@ -389,7 +467,9 @@
 <script src="js/render.js"></script>
 <script src="js/render-health.js"></script>
 <script src="js/render-alerts.js"></script>
+<script src="js/render-analysis.js"></script>
 <script src="js/render-history.js"></script>
+<script src="js/sync-sheets.js"></script>
 <script src="js/exports.js"></script>
 <script src="js/main.js"></script>
 
