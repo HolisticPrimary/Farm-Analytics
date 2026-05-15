@@ -3,11 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Stop the browser from caching the HTML so a new deploy is seen
+     immediately. The CSS/JS still need their own cache-bust query
+     string (?v=...) — bump APP_VERSION below when releasing. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>FarmSense · ระบบวิเคราะห์ฟาร์มไก่</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=20260515b">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -456,22 +462,22 @@
 </main>
 
 <!-- ====== Application scripts (load order matters) ====== -->
-<script src="js/constants.js"></script>
-<script src="js/state.js"></script>
-<script src="js/ui-helpers.js"></script>
-<script src="js/analyzers.js"></script>
-<script src="js/analyzers-alerts.js"></script>
-<script src="js/schema-map.js"></script>
-<script src="js/history.js"></script>
-<script src="js/parser.js"></script>
-<script src="js/render.js"></script>
-<script src="js/render-health.js"></script>
-<script src="js/render-alerts.js"></script>
-<script src="js/render-analysis.js"></script>
-<script src="js/render-history.js"></script>
-<script src="js/sync-sheets.js"></script>
-<script src="js/exports.js"></script>
-<script src="js/main.js"></script>
+<script src="js/constants.js?v=20260515b"></script>
+<script src="js/state.js?v=20260515b"></script>
+<script src="js/ui-helpers.js?v=20260515b"></script>
+<script src="js/analyzers.js?v=20260515b"></script>
+<script src="js/analyzers-alerts.js?v=20260515b"></script>
+<script src="js/schema-map.js?v=20260515b"></script>
+<script src="js/history.js?v=20260515b"></script>
+<script src="js/parser.js?v=20260515b"></script>
+<script src="js/render.js?v=20260515b"></script>
+<script src="js/render-health.js?v=20260515b"></script>
+<script src="js/render-alerts.js?v=20260515b"></script>
+<script src="js/render-analysis.js?v=20260515b"></script>
+<script src="js/render-history.js?v=20260515b"></script>
+<script src="js/sync-sheets.js?v=20260515b"></script>
+<script src="js/exports.js?v=20260515b"></script>
+<script src="js/main.js?v=20260515b"></script>
 
 </body>
 </html>

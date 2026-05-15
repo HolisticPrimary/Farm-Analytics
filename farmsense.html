@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Stop the browser from caching the HTML so a new deploy is seen
+     immediately. The CSS/JS still need their own cache-bust query
+     string (?v=...) — bump APP_VERSION below when releasing. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>FarmSense · ระบบวิเคราะห์ฟาร์มไก่</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -664,6 +670,476 @@ footer.colophon {
 .modal-btn.ghost { background: var(--surface-2); color: var(--ink-soft); }
 .modal-btn.ghost:hover { background: var(--blue-bg); color: var(--blue-dark); }
 
+/* ============ DAILY OVERVIEW TAB (ภาพรวมรายวัน) ============ */
+/* Compact alert pill that appears at the top of Overview when at least
+   one house tripped a daily/cumulative threshold. */
+#overview-alert-card { margin: 14px 0 4px; }
+#overview-alert-card .insight.good {
+  background: var(--green-bg); color: var(--green);
+  border-left: 4px solid var(--green);
+  padding: 10px 14px; border-radius: var(--radius-sm); font-weight: 500;
+}
+.alert-card {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: var(--amber-bg); border-left: 4px solid var(--amber);
+  padding: 14px 16px; border-radius: var(--radius-sm);
+}
+.alert-card.crit { background: var(--red-bg); border-left-color: var(--red); }
+.alert-card .ac-icon { font-size: 22px; line-height: 1; padding-top: 2px; }
+.alert-card .ac-body { flex: 1; font-size: 13px; line-height: 1.7; }
+.alert-card .ac-body b.crit { color: var(--red); }
+.alert-card .ac-body b.warn { color: var(--amber); }
+.alert-card .ac-cta {
+  margin-top: 4px; font-size: 12px; color: var(--ink-soft);
+}
+
+/* Headline status banner — one line, gives the day's verdict at a glance. */
+.daily-banner {
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 22px;
+  border-radius: var(--radius);
+  margin: 14px 0 18px;
+  box-shadow: var(--shadow-sm);
+}
+.daily-banner.banner-good { background: var(--green-bg); border-left: 5px solid var(--green); }
+.daily-banner.banner-warn { background: var(--amber-bg); border-left: 5px solid var(--amber); }
+.daily-banner.banner-bad  { background: var(--red-bg);   border-left: 5px solid var(--red); }
+.daily-banner .db-icon { font-size: 28px; line-height: 1; }
+.daily-banner .db-msg { font-size: 16px; line-height: 1.5; color: var(--ink); }
+.daily-banner .db-msg b { color: var(--ink); }
+.daily-banner.banner-bad .db-msg b  { color: var(--red); }
+.daily-banner.banner-warn .db-msg b { color: var(--amber); }
+.daily-banner.banner-good .db-msg b { color: var(--green); }
+
+/* Sub-section header (between banner + cards, between cards + disease) */
+.sub-section {
+  font-family: 'Bai Jamjuree', sans-serif;
+  font-size: 16px; font-weight: 600; color: var(--navy);
+  margin: 22px 0 12px;
+  display: flex; align-items: baseline; gap: 10px;
+}
+.sub-section small {
+  font-size: 12px; font-weight: 400; color: var(--ink-mute);
+  letter-spacing: 0.02em;
+}
+
+/* House-card grid: roomy cards, one per house, two per row on desktop. */
+.house-cards {
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+}
+.house-card {
+  background: var(--surface); border-radius: var(--radius);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--green);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.house-card.card-watch { border-left-color: var(--amber); background: linear-gradient(180deg, var(--amber-bg) 0%, var(--surface) 22%); }
+.house-card.card-alert { border-left-color: var(--red); background: linear-gradient(180deg, var(--red-bg) 0%, var(--surface) 22%); }
+.house-card.compact { padding: 12px 14px; gap: 6px; }
+
+.hc-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; flex-wrap: wrap;
+}
+.hc-title {
+  display: flex; align-items: center; gap: 8px; font-size: 14px;
+  flex-wrap: wrap;
+}
+.hc-emoji { font-size: 16px; line-height: 1; }
+.hc-age { color: var(--ink-mute); font-size: 12px; margin-left: 4px; }
+
+/* Two big stat panels (cumulative + daily) side by side */
+.hc-stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+}
+.hc-stat {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  border: 1px solid transparent;
+}
+.hc-stat.watch { background: var(--amber-bg); border-color: rgba(200,134,11,.20); }
+.hc-stat.alert { background: var(--red-bg);   border-color: rgba(214,40,40,.22); }
+.hc-stat-lab {
+  font-size: 11px; color: var(--ink-mute);
+  font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.hc-stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px; font-weight: 700; color: var(--ink);
+  line-height: 1.1; margin-top: 4px;
+}
+.hc-stat-val small { font-size: 14px; font-weight: 500; color: var(--ink-mute); margin-left: 2px; }
+.hc-stat.watch .hc-stat-val { color: var(--amber); }
+.hc-stat.alert .hc-stat-val { color: var(--red); }
+.hc-stat-bar {
+  height: 6px; background: rgba(255,255,255,.65);
+  border-radius: 999px; overflow: hidden; margin-top: 6px;
+}
+.hc-stat-bar i {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--green-soft); transition: width .25s;
+}
+.hc-stat.watch .hc-stat-bar i { background: var(--amber-soft); }
+.hc-stat.alert .hc-stat-bar i { background: var(--red-soft); }
+.hc-stat-foot {
+  font-size: 10.5px; color: var(--ink-mute); margin-top: 5px;
+  line-height: 1.5;
+}
+
+/* Cull AM/PM split — single segmented bar (blue=AM, amber=PM) */
+.hc-cull {
+  background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px;
+}
+.hc-cull-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; margin-bottom: 6px; flex-wrap: wrap; font-size: 12px;
+}
+.hc-cull-head .lab { color: var(--ink-soft); font-weight: 600; font-size: 12px; }
+.hc-cull-bar {
+  display: flex; height: 22px; border-radius: 999px; overflow: hidden;
+  background: var(--surface);
+}
+.hc-cull-bar .cull-seg {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: #fff;
+  padding: 0 8px; white-space: nowrap; overflow: hidden;
+  transition: flex-grow .25s;
+}
+.hc-cull-bar .cull-seg.am { background: var(--blue); }
+.hc-cull-bar .cull-seg.pm { background: var(--amber); }
+
+/* Env investigation checklist — 2x2 grid of icon + label + value */
+.hc-env {
+  background: var(--blue-bg); border-radius: var(--radius-sm); padding: 12px 14px;
+  border: 1px solid rgba(43,127,212,.15);
+}
+.hc-env.urgent {
+  background: rgba(214,40,40,.06);
+  border-color: rgba(214,40,40,.25);
+}
+.hc-env-head { font-size: 12px; color: var(--ink-soft); margin-bottom: 8px; }
+.hc-env-head b { color: var(--ink); }
+.hc-env.urgent .hc-env-head { color: var(--red); }
+.hc-env.urgent .hc-env-head b { color: var(--red); }
+.hc-env-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px;
+}
+.hc-env-item {
+  display: flex; align-items: center; gap: 6px; font-size: 12px;
+}
+.hc-env-item .env-icon { font-size: 14px; }
+.hc-env-item .env-lab { color: var(--ink-mute); flex: 0 0 auto; }
+.hc-env-item .env-val {
+  margin-left: auto; font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px; font-weight: 600; color: var(--ink);
+}
+.hc-env-warn {
+  margin-top: 8px; padding-top: 8px;
+  border-top: 1px dashed rgba(43,127,212,.25);
+  font-size: 11.5px; color: var(--ink-soft); line-height: 1.55;
+}
+.hc-env.urgent .hc-env-warn { border-top-color: rgba(214,40,40,.20); }
+
+/* Compact card (OK section) — single horizontal row of key numbers */
+.house-card.compact .hc-compact-row {
+  display: flex; gap: 18px; flex-wrap: wrap;
+  font-family: 'JetBrains Mono', monospace; font-size: 13px;
+  color: var(--ink-soft);
+}
+.house-card.compact .hc-compact-row .lab {
+  color: var(--ink-mute); font-size: 11px;
+  margin-right: 4px; font-family: 'IBM Plex Sans Thai', sans-serif;
+}
+.house-card.compact .hc-compact-row b { color: var(--ink); }
+
+/* Disease watch cards (kept from previous design) */
+#disease-watch {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+.disease-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px;
+}
+.disease-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 10px; margin-bottom: 10px; flex-wrap: wrap;
+}
+.disease-head h4 {
+  font-family: 'Bai Jamjuree', sans-serif; font-size: 14.5px;
+  color: var(--navy); font-weight: 600;
+}
+.house-tags { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.house-tag {
+  font-size: 11px; color: var(--ink-soft);
+  background: var(--surface-2); padding: 2px 8px; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.house-tag .age { color: var(--ink-mute); font-size: 10.5px; }
+.disease-list {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 8px 0; border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.disease-row .d-head {
+  display: flex; align-items: center; gap: 7px; font-size: 13px;
+  margin-bottom: 2px;
+}
+.disease-row .d-signs {
+  font-size: 11.5px; color: var(--ink-soft); line-height: 1.55;
+  padding-left: 2px;
+}
+.disease-routine {
+  margin-top: 10px; font-size: 11.5px; color: var(--ink-soft);
+  line-height: 1.55;
+}
+.disease-routine .lab {
+  display: block; font-size: 10.5px; color: var(--ink-mute);
+  margin-bottom: 2px; font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .house-cards { grid-template-columns: 1fr; }
+  .hc-stats { grid-template-columns: 1fr; }
+  .hc-env-grid { grid-template-columns: 1fr; }
+  .daily-banner { padding: 14px 16px; }
+  .daily-banner .db-msg { font-size: 14px; }
+}
+
+/* ============ PER-HOUSE ANALYSIS TAB (วิเคราะห์เล้า) ============ */
+.analysis-picker { padding-bottom: 14px; }
+.ana-farm-group { margin-top: 10px; }
+.ana-farm-group:first-child { margin-top: 0; }
+.ana-farm-label {
+  font-size: 12px; color: var(--ink-mute); margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.ana-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.ana-pill {
+  cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border-2);
+  color: var(--ink-soft);
+  padding: 6px 12px; border-radius: 999px;
+  font-family: 'IBM Plex Sans Thai', sans-serif; font-size: 12.5px; font-weight: 500;
+  transition: all .12s;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.ana-pill small { color: var(--ink-mute); font-size: 10.5px; font-weight: 400; }
+.ana-pill:hover { background: var(--blue-bg); border-color: var(--blue-soft); color: var(--blue-dark); }
+.ana-pill.active {
+  background: var(--navy); border-color: var(--navy); color: #fff;
+  box-shadow: 0 2px 6px rgba(22,40,74,.18);
+}
+.ana-pill.active small { color: rgba(255,255,255,.7); }
+
+.ana-header {
+  margin: 16px 0 10px;
+  display: flex; align-items: baseline; gap: 10px;
+}
+.ana-header h3 {
+  font-family: 'Bai Jamjuree', sans-serif; font-size: 18px; font-weight: 600; color: var(--navy);
+}
+.ana-header h3 small { font-size: 12px; color: var(--ink-mute); font-weight: 400; margin-left: 6px; }
+
+.ana-kpi {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  margin-bottom: 12px;
+}
+.ana-kpi-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 12px 14px;
+}
+.ana-kpi-item .lab {
+  font-size: 11px; color: var(--ink-mute);
+  font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.ana-kpi-item .val {
+  font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700;
+  margin-top: 3px; color: var(--ink); line-height: 1.1;
+}
+.ana-kpi-item .val.good { color: var(--green); }
+.ana-kpi-item .val.warn { color: var(--amber); }
+.ana-kpi-item .val.bad  { color: var(--red); }
+.ana-kpi-item .sub { font-size: 11px; color: var(--ink-mute); margin-top: 3px; }
+
+.ana-problems {
+  background: var(--amber-bg); border-left: 4px solid var(--amber);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px; margin: 12px 0 18px;
+}
+.ana-problems h4 {
+  font-family: 'Bai Jamjuree', sans-serif; font-size: 14px; font-weight: 600;
+  color: var(--ink); margin-bottom: 6px;
+}
+.ana-problems h4 small { color: var(--ink-mute); font-size: 11px; font-weight: 400; margin-left: 4px; }
+.ana-problems ul { padding-left: 18px; margin: 0; font-size: 12.5px; line-height: 1.8; }
+.ana-problems b.bad  { color: var(--red); }
+.ana-problems b.warn { color: var(--amber); }
+
+.ana-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;
+}
+.ana-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column;
+  border-left: 4px solid var(--ink-mute);
+  transition: box-shadow .15s;
+}
+.ana-card.status-good    { border-left-color: var(--green); }
+.ana-card.status-warn    { border-left-color: var(--amber); }
+.ana-card.status-bad     { border-left-color: var(--red);
+                            background: linear-gradient(180deg, rgba(214,40,40,0.04) 0%, var(--surface) 18%); }
+.ana-card.status-neutral { border-left-color: var(--ink-mute); }
+.ana-card:hover { box-shadow: var(--shadow-md); }
+
+.ana-card-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; margin-bottom: 6px;
+}
+.ana-card-head h4 {
+  font-family: 'Bai Jamjuree', sans-serif; font-size: 14px; font-weight: 600;
+  color: var(--navy);
+}
+.ana-badge {
+  font-size: 10.5px; font-weight: 700;
+  padding: 3px 9px; border-radius: 999px;
+  white-space: nowrap; letter-spacing: 0.02em;
+}
+.ana-badge.status-good    { background: var(--green-bg);  color: var(--green); }
+.ana-badge.status-warn    { background: var(--amber-bg);  color: var(--amber); }
+.ana-badge.status-bad     { background: var(--red-bg);    color: var(--red); }
+.ana-badge.status-neutral { background: var(--surface-2); color: var(--ink-mute); }
+
+/* Big-number headline — the "answer at a glance" for each card */
+.ana-headline {
+  margin: 4px 0 10px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.ana-headline-big {
+  font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700;
+  color: var(--ink); line-height: 1.2;
+}
+.ana-headline-big small {
+  font-size: 13px; font-weight: 500; color: var(--ink-mute);
+  margin-left: 2px;
+}
+.ana-headline-big .num-secondary { color: var(--ink-soft); }
+.ana-headline-sub {
+  font-size: 11px; color: var(--ink-mute); line-height: 1.55;
+  margin-top: 3px;
+}
+
+.ana-svg {
+  width: 100%; height: auto; display: block;
+  margin-top: 2px;
+}
+
+.ana-takeaway {
+  margin-top: 10px; padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  font-size: 12px; line-height: 1.6; color: var(--ink-soft);
+}
+.ana-takeaway b { color: var(--ink); }
+.ana-card.status-bad .ana-takeaway b { color: var(--red); }
+.ana-card.status-warn .ana-takeaway b { color: var(--amber); }
+
+@media (max-width: 980px) {
+  .ana-kpi { grid-template-columns: 1fr 1fr; }
+  .ana-grid { grid-template-columns: 1fr; }
+}
+
+/* ============ SETTINGS TAB · Google Sheets sync ============ */
+.input-group input[type=url] {
+  width: 100%; padding: 10px 12px;
+  border: 1px solid var(--border-2); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--ink);
+  font-family: 'JetBrains Mono', monospace; font-size: 12.5px;
+  transition: border-color .12s, box-shadow .12s;
+}
+.input-group input[type=url]:focus {
+  outline: none; border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-bg);
+}
+.sync-status {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px; font-size: 12.5px; color: var(--ink-soft);
+}
+.sync-status .dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--ink-mute);
+}
+.sync-status .dot.good { background: var(--green); box-shadow: 0 0 0 3px rgba(46,125,79,.12); }
+.sync-status .dot.bad  { background: var(--red);   box-shadow: 0 0 0 3px rgba(214,40,40,.12); }
+.sync-status .dot.warn { background: var(--amber); box-shadow: 0 0 0 3px rgba(200,134,11,.12); }
+.sync-status .dot.mute { background: var(--ink-mute); }
+
+.code-block {
+  background: #0e1a2c; color: #cbd5e1;
+  font-family: 'JetBrains Mono', monospace; font-size: 11.5px; line-height: 1.55;
+  padding: 14px 16px; border-radius: var(--radius-sm);
+  max-height: 320px; overflow: auto;
+  white-space: pre; margin-bottom: 10px;
+}
+.code-block::-webkit-scrollbar { width: 10px; height: 10px; }
+.code-block::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+.setup-steps {
+  padding-left: 22px; font-size: 13px; line-height: 1.85;
+}
+.setup-steps li { margin-bottom: 4px; }
+.setup-steps li small {
+  display: block; color: var(--ink-mute); font-size: 11.5px;
+  margin-top: 2px; line-height: 1.5;
+}
+
+/* Google Sheets chart embed in the History tab */
+#sheets-chart-embed { margin: 12px 0 18px; }
+.sheets-embed-wrap {
+  position: relative; width: 100%;
+  padding-bottom: 56.25%; /* 16:9 */
+  margin-top: 10px; border-radius: var(--radius-sm); overflow: hidden;
+  background: var(--surface-2);
+}
+.sheets-embed {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  border: 0;
+}
+
+/* Inline SVG demo chart shown before Sheets is configured */
+.chart-demo-card .demo-pill {
+  display: inline-block; margin-left: 8px;
+  background: var(--amber-bg); color: var(--amber);
+  font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+  padding: 2px 8px; border-radius: 999px;
+  vertical-align: 2px;
+}
+.chart-demo-wrap {
+  margin-top: 12px; padding: 10px 6px;
+  background: var(--surface-2); border-radius: var(--radius-sm);
+}
+.chart-demo-svg {
+  width: 100%; height: auto; display: block;
+  max-width: 100%;
+}
+.chart-demo-legend {
+  display: flex; flex-wrap: wrap; gap: 8px 18px;
+  padding: 12px 14px 4px;
+  font-size: 12px; color: var(--ink-soft);
+}
+.chart-demo-legend .legend-item {
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.chart-demo-legend .legend-swatch {
+  display: inline-block; width: 14px; height: 3px; border-radius: 2px;
+}
+.chart-demo-legend small { color: var(--ink-mute); font-size: 11px; }
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 720px) {
   .wrap { padding: 0 16px; }
@@ -756,13 +1232,14 @@ footer.colophon {
 
     <div class="tabs" id="tabs">
       <button class="tab active" data-tab="overview">ภาพรวม <span class="count" id="cnt-overview"></span></button>
+      <button class="tab" data-tab="alerts">ภาพรวมรายวัน <span class="count" id="cnt-alerts"></span></button>
+      <button class="tab" data-tab="analysis">🔍 วิเคราะห์เล้า <span class="count" id="cnt-analysis"></span></button>
       <button class="tab" data-tab="mortality">ตาย &amp; วิธีแก้ <span class="count" id="cnt-mortality"></span></button>
       <button class="tab" data-tab="feed">อาหาร vs STD <span class="count" id="cnt-feed"></span></button>
-      <button class="tab" data-tab="fcr">FCR &amp; กำไร</button>
       <button class="tab" data-tab="env">อุณหภูมิ &amp; ลม</button>
       <button class="tab" data-tab="health">สุขภาพ &amp; เติบโต <span class="count" id="cnt-health"></span></button>
-      <button class="tab" data-tab="history">ประวัติ &amp; แนวโน้ม</button>
       <button class="tab" data-tab="export">Export</button>
+      <button class="tab" data-tab="settings">⚙ ตั้งค่า</button>
     </div>
 
     <!-- TAB: OVERVIEW -->
@@ -770,6 +1247,7 @@ footer.colophon {
       <h2 class="sec"><span class="num">§ 01</span> ภาพรวม</h2>
       <div class="sec-rule"></div>
       <p class="lede" id="overview-lede"></p>
+      <div id="overview-alert-card"></div>
       <div class="kpi-row" id="kpi-row"></div>
       <h2 class="sec" style="font-size:18px"><span class="num">§ 01·a</span> เล้าที่ต้องดูวันนี้</h2>
       <div class="sec-rule"></div>
@@ -780,6 +1258,20 @@ footer.colophon {
       <h2 class="sec" style="font-size:18px; margin-top:24px"><span class="num">§ 01·c</span> Heatmap ทุกเล้า</h2>
       <div class="sec-rule"></div>
       <div id="heatmap-container"></div>
+    </div>
+
+    <!-- TAB: PER-HOUSE ANALYSIS -->
+    <div class="tab-content" id="tab-analysis">
+      <h2 class="sec"><span class="num">§ 03</span> 🔍 วิเคราะห์เล้า — แนวโน้ม day-by-day</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">เลือกเล้าเพื่อดู<b>แนวโน้มทุก KPI ตลอดรุ่น</b> · ดึงจากชีท H 1...H N (ข้อมูลรายวัน) · จุดสีแดงคือวันที่ผิดปกติ</p>
+
+      <div class="card analysis-picker">
+        <h4>เลือกเล้าที่จะวิเคราะห์</h4>
+        <div id="analysis-house-picker"></div>
+      </div>
+
+      <div id="analysis-content"></div>
     </div>
 
     <!-- TAB: MORTALITY -->
@@ -840,51 +1332,6 @@ footer.colophon {
           </thead>
           <tbody id="feed-tbody"></tbody>
         </table>
-      </div>
-    </div>
-
-    <!-- TAB: FCR & PROFIT -->
-    <div class="tab-content" id="tab-fcr">
-      <h2 class="sec"><span class="num">§ 04</span> FCR &amp; การคำนวณกำไร</h2>
-      <div class="sec-rule"></div>
-      <p class="lede">ปรับค่าราคา → ระบบคำนวณ break-even FCR และ profit matrix ทันที</p>
-
-      <div class="card">
-        <h4>ค่ามาตรฐานในการคำนวณ <span style="font-size:11px; color:var(--ink-mute); font-weight:400; letter-spacing:0.05em">(แก้ได้ทันที)</span></h4>
-        <div class="input-grid">
-          <div class="input-group">
-            <label>ราคาขาย Live (บาท/kg)</label>
-            <input type="number" id="price-sale" value="42" step="0.5" min="20" max="100">
-          </div>
-          <div class="input-group">
-            <label>ราคาลูกไก่ (บาท/ตัว)</label>
-            <input type="number" id="price-chick" value="18" step="0.5" min="5" max="50">
-          </div>
-          <div class="input-group">
-            <label>ราคาอาหาร PPF (บาท/kg)</label>
-            <input type="number" id="price-feed" value="19" step="0.5" min="10" max="40">
-          </div>
-          <div class="input-group">
-            <label>ค่าจัดการ (บาท/ตัว/รุ่น)</label>
-            <input type="number" id="price-opex" value="4" step="0.5" min="0" max="20">
-          </div>
-        </div>
-      </div>
-
-      <div class="kpi-row" id="fcr-kpi"></div>
-
-      <div class="card">
-        <h4>4A · ตาราง Sensitivity · กำไรต่อตัว (บาท) ตาม FCR × น้ำหนักจับ</h4>
-        <div class="card-sub">สีเขียว = กำไรดี · สีเหลือง = กำไรพอใช้ · สีแดง = ใกล้/ขาดทุน · สีแดงทึบ = ขาดทุนแน่นอน</div>
-        <div class="table-wrap">
-          <table id="sens-table"></table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h4>4B · กำไรประมาณการรายฟาร์ม</h4>
-        <div class="card-sub">สมมติ FCR &amp; น้ำหนักตามฟาร์ม · ใช้เป็น estimate</div>
-        <div id="farm-profit"></div>
       </div>
     </div>
 
@@ -1025,12 +1472,103 @@ footer.colophon {
       </div>
     </div>
 
-    <!-- TAB: HISTORY & TREND -->
-    <div class="tab-content" id="tab-history">
-      <h2 class="sec"><span class="num">§ 08</span> ประวัติ &amp; แนวโน้ม</h2>
+    <!-- TAB: DAILY OVERVIEW (ภาพรวมรายวัน) -->
+    <div class="tab-content" id="tab-alerts">
+      <h2 class="sec"><span class="num">§ 02</span> ภาพรวมรายวัน</h2>
       <div class="sec-rule"></div>
-      <p class="lede">ทุกครั้งที่อัปโหลดไฟล์ ระบบบันทึก snapshot ไว้ในเบราว์เซอร์อัตโนมัติ — เทียบรอบต่อรอบ, ดูแนวโน้ม %ตาย และความเร็วการตายข้ามวัน · ข้อมูลไม่ออกจากเครื่อง</p>
-      <div id="history-board"></div>
+      <p class="lede">
+        เกณฑ์: ตายรายวันไม่เกิน <b id="al-d-thresh">0.10%</b> · ตายสะสมไม่เกิน <b id="al-c-thresh">3.0%</b> ·
+        ถ้าทะลุเกณฑ์ ให้เช็ค <b>แรงลม · อุณหภูมิ · ความชื้น</b> ตามอายุไก่
+      </p>
+
+      <!-- Headline status banner -->
+      <div id="daily-banner"></div>
+
+      <!-- KPI summary -->
+      <div class="kpi-row" id="alerts-kpi"></div>
+
+      <!-- Per-house cards: one card = one เล้า, everything in one place -->
+      <h3 class="sub-section">เล้าที่ต้องดูก่อน <small id="cards-priority-count"></small></h3>
+      <div class="house-cards" id="house-cards-priority"></div>
+
+      <h3 class="sub-section">เล้าที่ปกติ <small id="cards-ok-count"></small></h3>
+      <div class="house-cards" id="house-cards-ok"></div>
+
+      <!-- Age-banded disease reference (sticky-style at bottom) -->
+      <h3 class="sub-section">โรคที่ต้องเฝ้าระวังตามช่วงอายุ</h3>
+      <p class="card-sub" style="margin-top:-4px; margin-bottom:10px">ใช้เป็นรายการตรวจสอบประจำ — ไม่ใช่การวินิจฉัย</p>
+      <div id="disease-watch"></div>
+    </div>
+
+    <!-- TAB: SETTINGS · Google Sheets sync -->
+    <div class="tab-content" id="tab-settings">
+      <h2 class="sec"><span class="num">§ 10</span> ตั้งค่า · เชื่อม Google Sheets</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">เชื่อมต่อ Google Sheet เพื่อเก็บประวัติข้ามวัน · กราฟที่ publish จาก Sheets จะแสดงด้านล่างเพื่อตรวจสอบทันที</p>
+
+      <!-- Step 1 — Web App URL -->
+      <div class="card">
+        <h4>1️⃣ Web App URL (Apps Script) <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· รับข้อมูลที่อัปโหลด → append เข้า Sheet</span></h4>
+        <div class="input-group" style="margin-top:8px">
+          <label>วาง URL ที่ได้จาก "Deploy → Web app"</label>
+          <input type="url" id="sheets-webhook-url" placeholder="https://script.google.com/macros/s/AKfy.../exec">
+        </div>
+        <div class="sync-status" id="sheets-sync-status"></div>
+        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap">
+          <button class="modal-btn primary" id="sheets-save-btn">บันทึก</button>
+          <button class="modal-btn" id="sheets-test-btn">🔬 ทดสอบการเชื่อมต่อ</button>
+          <button class="modal-btn ghost" id="sheets-sync-all-btn">↻ Sync ฟาร์มที่โหลดอยู่ทั้งหมด</button>
+        </div>
+      </div>
+
+      <!-- Step 2 — Chart URL -->
+      <div class="card">
+        <h4>2️⃣ URL กราฟจาก Google Sheets <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· ฝังมาแสดงด้านล่าง</span></h4>
+        <div class="input-group" style="margin-top:8px">
+          <label>ใน Sheet: คลิกกราฟ → ⋮ → Publish chart → Copy URL หรือ iframe</label>
+          <input type="url" id="sheets-chart-url" placeholder="https://docs.google.com/spreadsheets/d/.../pubchart?oid=...">
+        </div>
+        <div class="card-sub" style="margin-top:8px">วางได้ทั้ง URL ตรงๆ หรือโค้ด <code>&lt;iframe ...&gt;</code> เต็มๆ — ระบบจะดึง src ให้เอง</div>
+      </div>
+
+      <!-- Chart preview / embed -->
+      <div id="sheets-chart-embed"></div>
+
+      <!-- Step 3 — Apps Script template -->
+      <div class="card">
+        <h4>3️⃣ โค้ด Apps Script <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· paste ใน Sheet → Extensions → Apps Script</span></h4>
+        <div class="card-sub" style="margin-bottom:8px">เปิด Google Sheet ใหม่ → Extensions → Apps Script → ลบของเดิม → paste โค้ดนี้ → Save → Deploy → Web app</div>
+        <pre id="apps-script-code" class="code-block">กำลังโหลด...</pre>
+        <button class="modal-btn" id="apps-script-copy-btn">📋 Copy โค้ดทั้งหมด</button>
+      </div>
+
+      <!-- Setup walkthrough -->
+      <div class="card">
+        <h4>📖 ขั้นตอนการตั้งค่า (ทำครั้งเดียว ~10 นาที)</h4>
+        <ol class="setup-steps">
+          <li><b>สร้าง Google Sheet ใหม่</b> ตั้งชื่อ เช่น "ประวัติฟาร์ม"</li>
+          <li><b>เปิด Apps Script:</b> เมนู Extensions → Apps Script</li>
+          <li><b>Paste โค้ด</b> จากกล่องข้างบน → กด Save (💾)</li>
+          <li><b>Deploy:</b> Deploy → New deployment → Type: <b>Web app</b><br>
+            <small>Execute as: Me · Who has access: <b>Anyone</b> → Deploy → Authorize</small></li>
+          <li><b>Copy Web app URL</b> → วางในกล่อง 1️⃣ ข้างบน → กดบันทึก</li>
+          <li><b>ทดสอบเชื่อมต่อ</b> ด้วยปุ่ม 🔬 (ควรเห็น "Sync ล่าสุดสำเร็จ")</li>
+          <li><b>อัปโหลดใบหน้าเล้าทดสอบ</b> → ดูใน Sheet ว่ามีแถวเพิ่ม</li>
+          <li><b>ทำกราฟใน Sheet</b> (Insert → Chart) ตามใจ</li>
+          <li><b>Publish กราฟ:</b> คลิกกราฟ → ⋮ → Publish chart → Copy URL</li>
+          <li><b>วาง URL กราฟ</b> ในกล่อง 2️⃣ → กดบันทึก → กราฟปรากฏด้านล่างทันที</li>
+        </ol>
+      </div>
+
+      <div class="card dark">
+        <h4>🔒 ความปลอดภัย &amp; ข้อจำกัด</h4>
+        <div style="font-size:13px; line-height:1.8">
+          <b style="color:var(--gold-soft)">URL ลับ:</b> Web app URL ของ Apps Script ยาวและสุ่ม คนภายนอกเดาไม่ได้ ปลอดภัยพอสำหรับฟาร์มทั่วไป<br>
+          <b style="color:var(--gold-soft)">เพิ่มความปลอดภัย:</b> ในโค้ด Apps Script ใส่ค่า <code>SECRET</code> (ตอนนี้ <i>FarmSense ยังไม่ส่ง secret — ใส่ '' ไว้ก่อน</i>)<br>
+          <b style="color:var(--gold-soft)">ข้อมูลที่ส่ง:</b> KPI สำคัญต่อเล้า (เล้า, อายุ, ตาย, อาหาร, น้ำ, น้ำหนัก) ไม่ส่งไฟล์ Excel ดิบ<br>
+          <b style="color:var(--gold-soft)">localStorage:</b> URL เก็บใน browser นี้เท่านั้น — ใช้คนละเครื่องต้องตั้งค่าใหม่
+        </div>
+      </div>
     </div>
 
     <!-- TAB: EXPORT -->
@@ -1185,6 +1723,115 @@ const LIGHT_PROGRAM = [
 
 // Vaccination ages (days) — sheets "อายุ 7-14 วัน" / "อายุ 15-28 วัน".
 const VACCINE_AGES = [10, 14, 18];
+
+// ====================================================================
+// MORTALITY ALERT THRESHOLDS
+// dailyPct       — daily death rate ceiling (death_day / qty_rem).
+// warnDailyPct   — yellow band: ≥ warnDailyPct AND < dailyPct.
+// cumulativePct  — cumulative death-rate ceiling (pct_cum, expressed as a
+//                  number not a fraction — pct_cum is already %, so 3 = 3%).
+// warnCumulativePct — yellow band: ≥ warn AND < red.
+// Tune in this single place; render-alerts.js + analyzers-alerts.js read it.
+// ====================================================================
+const MORTALITY_THRESHOLDS = {
+  dailyPct: 0.001,        // 0.1 %  red
+  warnDailyPct: 0.0007,   // 0.07 % yellow
+  cumulativePct: 3.0,     // 3 %    red
+  warnCumulativePct: 2.5, // 2.5 %  yellow
+};
+
+// ====================================================================
+// DISEASE WATCH · likely diseases by chicken age (static reference).
+// Used by Module 4 (Disease-by-Age) on the Alerts tab. Sources: standard
+// broiler-disease references + vet field notes; treat as guidance, not
+// diagnosis. Each entry lists ขอบเขตอายุ, โรคที่น่าจะเกิด, อาการเตือน,
+// การป้องกัน/จัดการที่ควรทำเป็นกิจวัตรในช่วงนั้น.
+// ====================================================================
+const DISEASE_BY_AGE = [
+  {
+    ageMin: 1, ageMax: 7,
+    label: '1–7 วัน · brooding',
+    diseases: [
+      { name: 'Yolk sac infection / Omphalitis', risk: 'high',
+        signs: 'ตายช่วง 1-3 วันแรก · ท้องโต · สะดือไม่ปิด · ลูกไก่ pale อ่อนเพลีย' },
+      { name: 'E.coli (early)', risk: 'med',
+        signs: 'ตายกระจุก · ขนยุ่ง · กินอาหารน้อย' },
+      { name: 'Aspergillosis (เชื้อรา)', risk: 'low',
+        signs: 'หอบ · ตาบวม · ตายขึ้นเร็ว ถ้า bedding อับชื้น' },
+    ],
+    routine: 'ตรวจอุณหภูมิแม่อุ่น · ตรวจคุณภาพลูกไก่จาก hatchery · ตรวจ navel · brooding 32-33°C',
+  },
+  {
+    ageMin: 8, ageMax: 14,
+    label: '8–14 วัน · post-brooding',
+    diseases: [
+      { name: 'Coccidiosis (early)', risk: 'high',
+        signs: 'อึเหลว/มีเลือด · ขนยุ่ง · ซึม · ตายเริ่ม Day 10-12' },
+      { name: 'CRD / Mycoplasma', risk: 'med',
+        signs: 'หายใจมีเสียง · จาม · ตาบวม · ตายแบบเรื้อรัง' },
+      { name: 'IB (Infectious Bronchitis)', risk: 'med',
+        signs: 'อาการทางเดินหายใจ · น้ำมูก · หอบ' },
+    ],
+    routine: 'ใช้ยาป้องกัน coccidia ใน feed · ตรวจ litter ไม่เปียก · เริ่มลด temp ตามอายุ',
+  },
+  {
+    ageMin: 15, ageMax: 21,
+    label: '15–21 วัน · grower start',
+    diseases: [
+      { name: 'Coccidiosis (peak)', risk: 'high',
+        signs: 'spike mortality Day 18-22 · อึเลือด · pale comb · ตายตอนเช้า' },
+      { name: 'IBD / Gumboro', risk: 'high',
+        signs: 'ตายเฉียบพลัน · feathers ยุ่ง · ปีกตก · อึขาวเหลว · ตายขึ้นเร็วใน 24-48 ชม.' },
+      { name: 'Newcastle (mild form)', risk: 'med',
+        signs: 'หายใจลำบาก · ตาแฉะ · เดินเซ' },
+    ],
+    routine: 'ทำวัคซีน Gumboro/Newcastle ตามตาราง · ติดตาม FCR · ระวังหลังให้วัคซีน mortality bump',
+  },
+  {
+    ageMin: 22, ageMax: 28,
+    label: '22–28 วัน · grower',
+    diseases: [
+      { name: 'Necrotic Enteritis', risk: 'high',
+        signs: 'ตายเฉียบพลัน · อึดำเหม็น · ลำไส้บวมเลือด (necropsy)' },
+      { name: 'Newcastle', risk: 'med',
+        signs: 'อาการประสาท · คอบิด · ตายเป็นกลุ่ม' },
+      { name: 'Ascites (น้ำในช่องท้อง)', risk: 'med',
+        signs: 'ท้องโต · นั่งหายใจหอบ · ผิวเขียวคล้ำ · เริ่มในไก่ตัวใหญ่' },
+    ],
+    routine: 'ตรวจคุณภาพอาหารโปรตีนสูง · ระบายอากาศเริ่มเข้มขึ้น · เริ่มเฝ้า panting',
+  },
+  {
+    ageMin: 29, ageMax: 35,
+    label: '29–35 วัน · finisher',
+    diseases: [
+      { name: 'Heat stress', risk: 'high',
+        signs: 'หอบกางปีก · ดื่มน้ำเยอะ · ตายตอนเที่ยง-บ่าย · ตัวใหญ่ตายก่อน' },
+      { name: 'Sudden Death Syndrome (SDS)', risk: 'high',
+        signs: 'ตายฉับพลันท่านอนหงาย · ขาแข็ง · ตัวใหญ่ที่เติบโตเร็ว' },
+      { name: 'Ascites (peak)', risk: 'med',
+        signs: 'ท้องบวม · ขาเขียว · ตายช่วงเช้ามืด/หลังให้อาหาร' },
+    ],
+    routine: 'pump cooling pad ทำงานเต็มที่ · ลดอาหารช่วงเที่ยง · เพิ่ม nipple · ตรวจ FPM ตามเกณฑ์',
+  },
+  {
+    ageMin: 36, ageMax: 99,
+    label: '36+ วัน · pre-catch',
+    diseases: [
+      { name: 'Heat stress (รุนแรง)', risk: 'high',
+        signs: 'ตายตอนบ่าย · มากในวันร้อนจัด · panting รุนแรง · กินอาหารตก' },
+      { name: 'Leg disorders / Lameness', risk: 'med',
+        signs: 'ขาเป๋ · เดินไม่ได้ · นั่งมาก · ตัวใหญ่ขาไม่รับ' },
+      { name: 'Metabolic exhaustion', risk: 'med',
+        signs: 'FCR แย่ลง · น้ำหนักเพิ่มช้า · ตายเฉียบพลันใต้ส่วนแน่น' },
+    ],
+    routine: 'พิจารณาเร่งจับถ้าน้ำหนักถึง target · ระวัง heat wave · ลดความหนาแน่นถ้าได้',
+  },
+];
+
+function diseasesByAge(age) {
+  if (age == null) return null;
+  return DISEASE_BY_AGE.find(d => age >= d.ageMin && age <= d.ageMax) || null;
+}
 
 // Mixed-sex broiler body-weight standard (kg) by day of age — from the
 // "คละเพศ" reference sheet in the farm's face-sheet file. Used as the
@@ -1609,6 +2256,151 @@ function houseRiskScore(h, farmHouses) {
 
   reasons.sort((a, b) => b.pts - a.pts);
   return { score, level, reasons, peer, vaccine: vac, vaccineNote };
+}
+
+// ===== js/analyzers-alerts.js =====
+// ====================================================================
+// FARMSENSE · Alert analyzers (mortality thresholds, cull AM/PM,
+// investigation card lookups, disease watch).
+//
+// All four modules operate on a parsed house record (h) — the same
+// shape produced by parser.js. They never mutate inputs; each returns
+// a small result object the renderer can map straight onto the DOM.
+// ====================================================================
+
+// ---------- 1. Daily mortality alert ----------
+// Compares today's death rate (death_day / qty_rem) to the configured
+// red/yellow thresholds. status is one of:
+//   'OK'     · below the warn band
+//   'WATCH'  · between warn and red
+//   'ALERT'  · ≥ red threshold
+// `pct` is returned as a fraction (e.g. 0.0012 = 0.12 %).
+function mortalityDailyAlert(h, thresholds) {
+  const t = thresholds || MORTALITY_THRESHOLDS;
+  if (h.death_day == null || h.qty_rem == null || h.qty_rem <= 0) return null;
+  const pct = h.death_day / h.qty_rem;
+  let status = 'OK';
+  if (pct >= t.dailyPct)          status = 'ALERT';
+  else if (pct >= t.warnDailyPct) status = 'WATCH';
+  return {
+    pct,
+    deaths: h.death_day,
+    base: h.qty_rem,
+    threshold: t.dailyPct,
+    warnThreshold: t.warnDailyPct,
+    status,
+  };
+}
+
+// ---------- 2. Cumulative mortality alert ----------
+// pct_cum is already expressed as a percentage (e.g. 2.59 means 2.59 %),
+// so compare against the THRESHOLDS that are also stored as percentages.
+function mortalityCumulativeAlert(h, thresholds) {
+  const t = thresholds || MORTALITY_THRESHOLDS;
+  if (h.pct_cum == null) return null;
+  const pct = h.pct_cum;
+  let status = 'OK';
+  if (pct >= t.cumulativePct)          status = 'ALERT';
+  else if (pct >= t.warnCumulativePct) status = 'WATCH';
+  // proportion of the red ceiling used (for the progress bar)
+  const fillPct = Math.min(100, (pct / t.cumulativePct) * 100);
+  return {
+    pct,
+    threshold: t.cumulativePct,
+    warnThreshold: t.warnCumulativePct,
+    status,
+    fillPct,
+  };
+}
+
+// ---------- 3. Cull AM/PM breakdown ----------
+// Splits today's culls into morning vs evening + cull-of-loss share.
+// Returns null when the parser couldn't extract any AM/PM sub-field.
+function cullAmPmBreakdown(h) {
+  const parts = [h.m_died, h.m_culled, h.e_died, h.e_culled];
+  if (parts.every(v => v == null)) return null;
+  const md = h.m_died   || 0;
+  const mc = h.m_culled || 0;
+  const ed = h.e_died   || 0;
+  const ec = h.e_culled || 0;
+  const cullTotal = mc + ec;
+  const lossTotal = md + mc + ed + ec;
+  const amCullPct = cullTotal > 0 ? (mc / cullTotal) * 100 : 0;
+  const pmCullPct = cullTotal > 0 ? (ec / cullTotal) * 100 : 0;
+  const cullOfLossPct = lossTotal > 0 ? (cullTotal / lossTotal) * 100 : 0;
+  // Pattern signal — reuse the HEAT/NIGHT/EVEN convention from
+  // mortalityBreakdown() so the rest of the dashboard reads the same.
+  let pattern = 'EVEN';
+  if (ec > mc * 1.5)      pattern = 'HEAT';   // evening cull-heavy
+  else if (mc > ec * 1.5) pattern = 'NIGHT';  // morning cull-heavy
+  return {
+    amCull: mc, pmCull: ec,
+    amDied: md, pmDied: ed,
+    cullTotal, lossTotal,
+    amCullPct, pmCullPct,
+    cullOfLossPct,
+    pattern,
+  };
+}
+
+// ---------- 4. Investigation card (env target lookup) ----------
+// When a mortality alert fires, the operator needs a quick checklist:
+// "what *should* the wind/temperature be for a chicken this age?".
+// We don't have actual measured env values in the parsed data model —
+// this returns the TARGETS so the operator can read them, walk into
+// the house, and compare against what their sensors read.
+function investigateEnv(h) {
+  if (h.age == null) return null;
+  const tempTarget = farmTempLookup(h.age);
+  const pumpTrigger = farmPumpLookup(h.age);
+  const fpmBand = farmFpmLookup(h.age);
+  const envBand = ENV_TABLE.find(e => h.age >= e.ageMin && h.age <= e.ageMax) || null;
+  return {
+    age: h.age,
+    tempTarget,
+    pumpTrigger,
+    fpmBand,                          // [lo, hi] feet/min
+    fpmMs: fpmBand ? [(fpmBand[0]/197).toFixed(2), (fpmBand[1]/197).toFixed(2)] : null,
+    rhTarget: envBand ? envBand.rh : null,
+    warn: envBand ? envBand.warn : null,
+  };
+}
+
+// ---------- 5. Convenience: count alerts farm-wide ----------
+// Used by the Overview alert card, the tab badge, and the daily KPIs.
+//
+// `dailyAlert` / `cumAlert` are kind-specific counts — a house can be
+// counted in BOTH if it trips both thresholds. `alertHouses` /
+// `watchHouses` are UNIQUE-house counts based on the worst status the
+// house holds across daily & cumulative — use these when the KPI is
+// "เล้าที่ทะลุเกณฑ์" so the same house isn't double-counted.
+function countAlerts(farmKeys, thresholds) {
+  const t = thresholds || MORTALITY_THRESHOLDS;
+  let dailyAlert = 0, dailyWatch = 0, cumAlert = 0, cumWatch = 0;
+  let alertHouses = 0, watchHouses = 0;
+  for (const fk of farmKeys) {
+    const farm = STATE.farms[fk];
+    for (const h of farm.houses) {
+      const d = mortalityDailyAlert(h, t);
+      const c = mortalityCumulativeAlert(h, t);
+      if (d) {
+        if (d.status === 'ALERT') dailyAlert++;
+        else if (d.status === 'WATCH') dailyWatch++;
+      }
+      if (c) {
+        if (c.status === 'ALERT') cumAlert++;
+        else if (c.status === 'WATCH') cumWatch++;
+      }
+      // Worst-of-both for the unique-house counters.
+      const ds = d ? d.status : 'OK';
+      const cs = c ? c.status : 'OK';
+      const worst = (ds === 'ALERT' || cs === 'ALERT') ? 'ALERT'
+                  : (ds === 'WATCH' || cs === 'WATCH') ? 'WATCH' : 'OK';
+      if (worst === 'ALERT') alertHouses++;
+      else if (worst === 'WATCH') watchHouses++;
+    }
+  }
+  return { dailyAlert, dailyWatch, cumAlert, cumWatch, alertHouses, watchHouses };
 }
 
 // ===== js/schema-map.js =====
@@ -2108,6 +2900,84 @@ function buildHouses(rows, headerIdx, colMap) {
   return houses;
 }
 
+// ====================================================================
+// Daily history parser — pulls day-by-day metrics out of the H 1..H N
+// per-house sheets. All four reference templates share the same column
+// layout: B=day, C=date, F=feed used, L/M=temp lo/hi, N=humidity,
+// P=water, Q/R=morning died/culled, S/T=evening died/culled,
+// U=total death, V=total cull, Z=remaining, AA=weight, AB=FCR.
+// Returns { 1: [{day,...}, {day,...}], 2: [...], ... }.
+// ====================================================================
+function parseHouseDailyHistory(workbook) {
+  const histories = {};
+  const hSheets = workbook.SheetNames.filter(n => /^\s*H\s*\d+\s*$/i.test(n));
+  for (const name of hSheets) {
+    const m = name.match(/H\s*(\d+)/i);
+    if (!m) continue;
+    const houseNum = parseInt(m[1], 10);
+    const sheet = workbook.Sheets[name];
+    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+    // Find the header row — first row containing both 'อายุไก่' and 'วันที่'.
+    let hidx = -1;
+    for (let i = 0; i < Math.min(rows.length, 12); i++) {
+      const t = rowToText(rows[i]);
+      if (t.includes('อายุไก่') && t.includes('วันที่')) { hidx = i; break; }
+    }
+    if (hidx < 0) continue;
+
+    // Data rows live below the merged sub-header (skip 2 rows).
+    const daily = [];
+    for (let r = hidx + 2; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const day = row[1];
+      if (typeof day !== 'number') continue;
+      const totalDeath = parseNumeric(row[20]);
+      const totalCull  = parseNumeric(row[21]);
+      const totalLoss  = parseNumeric(row[22]);
+      const remaining  = parseNumeric(row[25]);
+      const weight     = parseNumeric(row[26]);
+      const fcr        = parseNumeric(row[27]);
+      const tempLo     = parseNumeric(row[11]);
+      const tempHi     = parseNumeric(row[12]);
+      const humidity   = parseNumeric(row[13]);
+      const water      = parseNumeric(row[15]);
+      const feedUsed   = parseNumeric(row[5]);
+      const feedStdG   = parseNumeric(row[7]);
+      // A row is "live" only if the operator actually filled in
+      // operational data. The template often pre-fills qty_rem via a
+      // formula and pre-zeros death/cull, so we look at date + the
+      // measured columns (temp, water, weight, feed_used) that have to
+      // be typed by hand.
+      const hasOperatorData = (row[2] != null && row[2] !== '') ||
+        [tempLo, tempHi, water, feedUsed, weight].some(v => v != null && v !== 0);
+      if (!hasOperatorData) continue;
+      daily.push({
+        day: Math.floor(day),
+        date: row[2],
+        m_died:    parseNumeric(row[16]) || 0,
+        m_culled:  parseNumeric(row[17]) || 0,
+        e_died:    parseNumeric(row[18]) || 0,
+        e_culled:  parseNumeric(row[19]) || 0,
+        total_death: totalDeath || 0,
+        total_cull:  totalCull  || 0,
+        total_loss:  totalLoss  || 0,
+        qty_rem:    remaining,
+        weight,
+        fcr,
+        temp_lo:    tempLo,
+        temp_hi:    tempHi,
+        humidity,
+        water,
+        feed_used:  feedUsed,
+        feed_std_g: feedStdG,
+      });
+    }
+    if (daily.length > 0) histories[houseNum] = daily;
+  }
+  return histories;
+}
+
 async function parseExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -2143,6 +3013,19 @@ async function parseExcelFile(file) {
         if (houses.length === 0) {
           reject(new Error('ไม่พบข้อมูลเล้า — ตรวจสอบ format ของไฟล์'));
           return;
+        }
+
+        // Attach per-house daily history from H 1..H N sheets when available.
+        // The template usually pre-fills the H-sheet forward with formulas
+        // (date serials, zeroed totals, sometimes garbage water values), so
+        // truncate to the face sheet's reported current age — that's the
+        // source of truth for "what's been recorded so far".
+        const histories = parseHouseDailyHistory(workbook);
+        for (const h of houses) {
+          const num = Number(h.house);
+          let hist = Number.isFinite(num) ? (histories[num] || null) : null;
+          if (hist && h.age != null) hist = hist.filter(d => d.day <= h.age);
+          h.dailyHistory = hist && hist.length > 0 ? hist : null;
         }
 
         const info = extractFarmInfo(rows, file.name);
@@ -2189,12 +3072,14 @@ function renderDashboard() {
   });
 
   renderOverview(farmKeys);
+  renderOverviewAlertCard(farmKeys);
   renderRiskBoard(farmKeys);
   renderMortality(farmKeys);
   renderFeed(farmKeys);
-  renderFCR(farmKeys);
   renderEnv(farmKeys);
   renderHealth(farmKeys);
+  renderAlerts(farmKeys);
+  renderAnalysis(farmKeys);
 }
 
 // ========== RISK BOARD · "เล้าที่ต้องดูวันนี้" ==========
@@ -2986,6 +3871,1102 @@ function renderHealth(farmKeys) {
   document.getElementById('cnt-health').textContent = allHouses.length;
 }
 
+// ===== js/render-alerts.js =====
+// ====================================================================
+// FARMSENSE · Daily Overview tab (ภาพรวมรายวัน)
+//
+// One card per house, everything about that house in one place — so the
+// operator scans cards top-to-bottom instead of cross-referencing four
+// separate tables. Cards are sorted: ALERT → WATCH → OK.
+//
+//   - Headline banner ............... how the farm is doing overall today
+//   - KPI strip ..................... 4 numbers summarising the day
+//   - Priority cards ................ houses with ALERT or WATCH
+//   - OK cards ...................... houses that look fine (compact view)
+//   - Age-banded disease reference .. checklist by current age band
+// ====================================================================
+
+const RISK_PILL  = { OK: 'ok', WATCH: 'light', ALERT: 'crit' };
+const RISK_LABEL = { OK: 'ปกติ', WATCH: 'เฝ้าระวัง', ALERT: 'เกินเกณฑ์' };
+const DISEASE_RISK_CLS = { high: 'crit', med: 'high', low: 'watch' };
+const DISEASE_RISK_LBL = { high: 'เสี่ยงสูง', med: 'ปานกลาง', low: 'ต่ำ' };
+
+// Combine the cumulative + daily statuses into one overall ranking for
+// the card. ALERT beats WATCH beats OK; daily beats cumulative when
+// they tie (today's spike is more urgent than a slow drift).
+function overallStatus(d, c) {
+  const rank = { ALERT: 2, WATCH: 1, OK: 0 };
+  const ds = d ? d.status : 'OK';
+  const cs = c ? c.status : 'OK';
+  return rank[ds] >= rank[cs] ? ds : cs;
+}
+
+function renderAlerts(farmKeys) {
+  const allHouses = [];
+  for (const fk of farmKeys) {
+    for (const h of STATE.farms[fk].houses) {
+      allHouses.push({ ...h, farmKey: fk, farmName: STATE.farms[fk].name });
+    }
+  }
+
+  renderDailyBanner(allHouses, farmKeys);
+  renderAlertsKpi(allHouses, farmKeys);
+  renderHouseCards(allHouses, farmKeys);
+  renderDiseaseWatch(allHouses, farmKeys);
+
+  // Tab badge = UNIQUE house count over alert threshold (don't double
+  // count a house that trips both daily AND cumulative).
+  const counts = countAlerts(farmKeys);
+  const badge = document.getElementById('cnt-alerts');
+  if (badge) {
+    badge.textContent = counts.alertHouses > 0 ? counts.alertHouses : '';
+  }
+}
+
+// ---------- Headline banner (one line, big text) ----------
+function renderDailyBanner(allHouses, farmKeys) {
+  const host = document.getElementById('daily-banner');
+  if (!host) return;
+
+  const states = allHouses.map(h => {
+    const d = mortalityDailyAlert(h);
+    const c = mortalityCumulativeAlert(h);
+    return overallStatus(d, c);
+  });
+  const alerts = states.filter(s => s === 'ALERT').length;
+  const watches = states.filter(s => s === 'WATCH').length;
+
+  let cls, icon, msg;
+  if (alerts > 0) {
+    cls = 'banner-bad'; icon = '🚨';
+    msg = `<b>${alerts} เล้าทะลุเกณฑ์</b> ต้องเข้าตรวจสอบทันที` +
+          (watches > 0 ? ` · เฝ้าระวังอีก ${watches} เล้า` : '');
+  } else if (watches > 0) {
+    cls = 'banner-warn'; icon = '⚠️';
+    msg = `<b>${watches} เล้าเฝ้าระวัง</b> ใกล้ทะลุเกณฑ์ — ติดตามใกล้ชิด`;
+  } else {
+    cls = 'banner-good'; icon = '✓';
+    msg = `<b>ทุกเล้าอยู่ในเกณฑ์ปกติ</b> ${allHouses.length} เล้า`;
+  }
+
+  host.innerHTML = `
+    <div class="daily-banner ${cls}">
+      <div class="db-icon">${icon}</div>
+      <div class="db-msg">${msg}</div>
+    </div>`;
+}
+
+// ---------- KPI strip ----------
+function renderAlertsKpi(allHouses, farmKeys) {
+  const totalDeadToday = allHouses.reduce((s, h) => s + (h.death_day || 0), 0);
+  const totalRem = allHouses.reduce((s, h) => s + (h.qty_rem || 0), 0);
+  const farmDailyPct = totalRem > 0 ? (totalDeadToday / totalRem) * 100 : 0;
+  const totalDeadCum = allHouses.reduce((s, h) => s + (h.death_cum || 0), 0);
+  const totalIn = allHouses.reduce((s, h) => s + (h.qty_in || 0), 0);
+  const farmCumPct = totalIn > 0 ? (totalDeadCum / totalIn) * 100 : 0;
+
+  // Unique-house alert count (worst-of daily/cum). A house tripping both
+  // thresholds is counted once, not twice.
+  const counts = countAlerts(farmKeys);
+  const t = MORTALITY_THRESHOLDS;
+  const dailyClass = farmDailyPct >= t.dailyPct*100 ? 'warn'
+    : farmDailyPct >= t.warnDailyPct*100 ? 'warn' : 'good';
+  const cumClass = farmCumPct >= t.cumulativePct ? 'warn'
+    : farmCumPct >= t.warnCumulativePct ? 'warn' : 'good';
+
+  document.getElementById('alerts-kpi').innerHTML = `
+    <div class="stat">
+      <div class="lab">ตายวันนี้รวม</div>
+      <div class="val">${fmtNum(totalDeadToday)}</div>
+      <div class="delta ${dailyClass}">${farmDailyPct.toFixed(3)}%/วัน · เกณฑ์ ${(t.dailyPct*100).toFixed(2)}%</div>
+    </div>
+    <div class="stat">
+      <div class="lab">ตายสะสมรวม</div>
+      <div class="val">${fmtNum(totalDeadCum)}</div>
+      <div class="delta ${cumClass}">${farmCumPct.toFixed(2)}% · เกณฑ์ ${t.cumulativePct.toFixed(1)}%</div>
+    </div>
+    <div class="stat">
+      <div class="lab">เล้าทะลุเกณฑ์</div>
+      <div class="val">${counts.alertHouses}</div>
+      <div class="delta ${counts.alertHouses > 0 ? 'warn' : 'good'}">จาก ${allHouses.length} เล้า · เฝ้าระวัง ${counts.watchHouses}</div>
+    </div>
+    <div class="stat">
+      <div class="lab">เล้าคงเหลือ</div>
+      <div class="val">${fmtNum(totalRem)}</div>
+      <div class="delta">จาก ${fmtNum(totalIn)} ลง</div>
+    </div>
+  `;
+}
+
+// ---------- Per-house cards ----------
+function renderHouseCards(allHouses, farmKeys) {
+  // Annotate every house with daily/cum/cull/env + overall status, so the
+  // sort and the card rendering both work off the same precomputed bundle.
+  const rows = allHouses.map(h => {
+    const daily = mortalityDailyAlert(h);
+    const cum   = mortalityCumulativeAlert(h);
+    const cull  = cullAmPmBreakdown(h);
+    const env   = investigateEnv(h);
+    const status = overallStatus(daily, cum);
+    return { h, daily, cum, cull, env, status };
+  });
+
+  const rank = { ALERT: 2, WATCH: 1, OK: 0 };
+  rows.sort((a, b) => {
+    if (rank[a.status] !== rank[b.status]) return rank[b.status] - rank[a.status];
+    // tie-breaker: higher cumulative % first
+    return (b.cum ? b.cum.pct : 0) - (a.cum ? a.cum.pct : 0);
+  });
+
+  const priority = rows.filter(r => r.status !== 'OK');
+  const ok       = rows.filter(r => r.status === 'OK');
+
+  document.getElementById('cards-priority-count').textContent =
+    priority.length > 0 ? `(${priority.length} เล้า)` : '(ไม่มี)';
+  document.getElementById('cards-ok-count').textContent =
+    ok.length > 0 ? `(${ok.length} เล้า)` : '';
+
+  const pHost = document.getElementById('house-cards-priority');
+  const oHost = document.getElementById('house-cards-ok');
+
+  if (priority.length === 0) {
+    pHost.innerHTML = `<div class="insight good">✓ ไม่มีเล้าที่ต้องเฝ้าระวังเป็นพิเศษ</div>`;
+  } else {
+    pHost.innerHTML = priority.map((row, i) => buildHouseCard(row, i, farmKeys, false)).join('');
+  }
+
+  oHost.innerHTML = ok.length === 0
+    ? '<div class="insight">–</div>'
+    : ok.map((row, i) => buildHouseCard(row, i, farmKeys, true)).join('');
+}
+
+// Build the HTML for one house card. `compact` lays out the OK list
+// (smaller, less detail) — the priority section uses the full view.
+function buildHouseCard(row, idx, farmKeys, compact) {
+  const { h, daily, cum, cull, env, status } = row;
+  const farmClass = getFarmClass(h.farmKey, farmKeys);
+  const statusCls = status === 'ALERT' ? 'card-alert' : status === 'WATCH' ? 'card-watch' : 'card-ok';
+  const statusLabel = RISK_LABEL[status];
+  const statusEmoji = status === 'ALERT' ? '🔴' : status === 'WATCH' ? '🟡' : '🟢';
+
+  // ── Header ──
+  const farmShort = escapeHtml(h.farmName.replace('ฟาร์ม',''));
+  const header = `
+    <div class="hc-head">
+      <div class="hc-title">
+        <span class="hc-emoji">${statusEmoji}</span>
+        <span class="pill ${farmClass}">${farmShort}</span>
+        <b>เล้า ${escapeHtml(String(h.house))}</b>
+        <span class="hc-age">อายุ ${h.age != null ? h.age : '–'} วัน</span>
+      </div>
+      <span class="pill ${RISK_PILL[status]}">${statusLabel}</span>
+    </div>`;
+
+  if (compact) {
+    const cumPct = cum ? cum.pct.toFixed(2) + '%' : '–';
+    const dailyPct = daily ? (daily.pct * 100).toFixed(3) + '%' : '–';
+    return `<div class="house-card ${statusCls} compact">
+      ${header}
+      <div class="hc-compact-row">
+        <span><span class="lab">สะสม</span> <b>${cumPct}</b></span>
+        <span><span class="lab">วันนี้</span> <b>${dailyPct}</b></span>
+        <span><span class="lab">ตายวันนี้</span> <b>${fmtNum(h.death_day)}</b></span>
+      </div>
+    </div>`;
+  }
+
+  // ── Two mortality stats side-by-side ──
+  const cumPct = cum ? cum.pct : 0;
+  const cumFill = cum ? cum.fillPct : 0;
+  const cumStatus = cum ? cum.status : 'OK';
+  const dailyPct = daily ? daily.pct * 100 : 0;
+  const dailyStatus = daily ? daily.status : 'OK';
+  const dailyThreshPct = MORTALITY_THRESHOLDS.dailyPct * 100;
+  const dailyFill = daily ? Math.min(100, (daily.pct / MORTALITY_THRESHOLDS.dailyPct) * 100) : 0;
+
+  const stats = `
+    <div class="hc-stats">
+      <div class="hc-stat ${cumStatus.toLowerCase()}">
+        <div class="hc-stat-lab">ตายสะสม</div>
+        <div class="hc-stat-val">${cumPct.toFixed(2)}<small>%</small></div>
+        <div class="hc-stat-bar"><i style="width:${cumFill}%"></i></div>
+        <div class="hc-stat-foot">เกณฑ์ ${MORTALITY_THRESHOLDS.cumulativePct.toFixed(1)}% · ตาย ${fmtNum(h.death_cum)}</div>
+      </div>
+      <div class="hc-stat ${dailyStatus.toLowerCase()}">
+        <div class="hc-stat-lab">ตายวันนี้</div>
+        <div class="hc-stat-val">${dailyPct.toFixed(3)}<small>%</small></div>
+        <div class="hc-stat-bar"><i style="width:${dailyFill}%"></i></div>
+        <div class="hc-stat-foot">เกณฑ์ ${dailyThreshPct.toFixed(2)}% · ตาย ${fmtNum(h.death_day)} จาก ${fmtNum(h.qty_rem)}</div>
+      </div>
+    </div>`;
+
+  // ── Cull AM/PM mini split (only when there are culls) ──
+  let cullBlock = '';
+  if (cull && cull.cullTotal > 0) {
+    const patternLabel = cull.pattern === 'HEAT'
+      ? 'คัดเย็นเยอะ → ร้อน/heat stress'
+      : cull.pattern === 'NIGHT'
+        ? 'คัดเช้าเยอะ → หนาว/ปัญหากลางคืน'
+        : 'สม่ำเสมอ';
+    const patternCls = cull.pattern === 'HEAT' ? 'cf' : cull.pattern === 'NIGHT' ? 'high' : 'ok';
+    cullBlock = `
+      <div class="hc-cull">
+        <div class="hc-cull-head">
+          <span class="lab">การคัด · ${fmtNum(cull.cullTotal)} ตัว</span>
+          <span class="pill ${patternCls}">${patternLabel}</span>
+        </div>
+        <div class="hc-cull-bar">
+          <div class="cull-seg am" style="flex-grow:${cull.amCull}"
+               title="คัดเช้า ${cull.amCull}">${cull.amCull > 0 ? `เช้า ${cull.amCull} (${cull.amCullPct.toFixed(0)}%)` : ''}</div>
+          <div class="cull-seg pm" style="flex-grow:${cull.pmCull}"
+               title="คัดเย็น ${cull.pmCull}">${cull.pmCull > 0 ? `เย็น ${cull.pmCull} (${cull.pmCullPct.toFixed(0)}%)` : ''}</div>
+        </div>
+      </div>`;
+  }
+
+  // ── Environment investigation checklist ──
+  let envBlock = '';
+  if (env) {
+    const fpm = env.fpmBand ? `${env.fpmBand[0]}–${env.fpmBand[1]} FPM` : '–';
+    const ms  = env.fpmMs ? ` (${env.fpmMs[0]}–${env.fpmMs[1]} m/s)` : '';
+    const checklist = [
+      { icon: '🌡️', label: 'อุณหภูมิเป้า', val: env.tempTarget != null ? env.tempTarget.toFixed(1) + '°C' : '–' },
+      { icon: '🌬️', label: 'แรงลม', val: fpm + ms },
+      { icon: '💧', label: 'ความชื้น', val: env.rhTarget || '–' },
+      { icon: '🚰', label: 'ปั๊มแพดเปิดที่', val: env.pumpTrigger != null ? env.pumpTrigger.toFixed(1) + '°C' : '–' },
+    ];
+    const isAlert = status === 'ALERT';
+    envBlock = `
+      <div class="hc-env ${isAlert ? 'urgent' : ''}">
+        <div class="hc-env-head">
+          ${isAlert ? '⚠️ <b>ต้องเช็คหน้างาน:</b> ' : '<b>เกณฑ์สภาพแวดล้อมตามอายุ:</b>'}
+          เทียบกับค่าจริงในเล้า
+        </div>
+        <div class="hc-env-grid">
+          ${checklist.map(c => `
+            <div class="hc-env-item">
+              <span class="env-icon">${c.icon}</span>
+              <span class="env-lab">${c.label}</span>
+              <span class="env-val">${escapeHtml(String(c.val))}</span>
+            </div>`).join('')}
+        </div>
+        ${env.warn ? `<div class="hc-env-warn">💡 ${escapeHtml(env.warn)}</div>` : ''}
+      </div>`;
+  }
+
+  return `<div class="house-card ${statusCls}">
+    ${header}
+    ${stats}
+    ${cullBlock}
+    ${envBlock}
+  </div>`;
+}
+
+// ---------- Disease watch by age (unchanged behaviour, cleaner copy) ----------
+function renderDiseaseWatch(allHouses, farmKeys) {
+  const buckets = new Map();
+  for (const h of allHouses) {
+    const band = diseasesByAge(h.age);
+    if (!band) continue;
+    const key = `${band.ageMin}-${band.ageMax}`;
+    if (!buckets.has(key)) buckets.set(key, { band, houses: [] });
+    buckets.get(key).houses.push(h);
+  }
+  const container = document.getElementById('disease-watch');
+  if (buckets.size === 0) {
+    container.innerHTML = `<div class="insight">ไม่พบเล้าที่มีข้อมูลอายุ</div>`;
+    return;
+  }
+
+  const sortedBands = [...buckets.values()].sort((a, b) => a.band.ageMin - b.band.ageMin);
+
+  container.innerHTML = sortedBands.map(({ band, houses }) => {
+    const housePills = houses.map(h =>
+      `<span class="house-tag"><span class="pill ${getFarmClass(h.farmKey, farmKeys)}">${escapeHtml(h.farmName.replace('ฟาร์ม',''))}</span> <b>${escapeHtml(String(h.house))}</b><span class="age">${h.age}d</span></span>`
+    ).join('');
+    const diseaseRows = band.diseases.map(d => `
+      <div class="disease-row">
+        <div class="d-head">
+          <span class="pill ${DISEASE_RISK_CLS[d.risk] || 'watch'}">${DISEASE_RISK_LBL[d.risk] || '–'}</span>
+          <b>${escapeHtml(d.name)}</b>
+        </div>
+        <div class="d-signs">${escapeHtml(d.signs)}</div>
+      </div>`).join('');
+
+    return `
+      <div class="disease-card">
+        <div class="disease-head">
+          <h4>${escapeHtml(band.label)}</h4>
+          <div class="house-tags">${housePills}</div>
+        </div>
+        <div class="disease-list">${diseaseRows}</div>
+        <div class="disease-routine">
+          <span class="lab">การจัดการช่วงนี้:</span> ${escapeHtml(band.routine)}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ---------- Overview alert summary card (compact, single line) ----------
+function renderOverviewAlertCard(farmKeys) {
+  const host = document.getElementById('overview-alert-card');
+  if (!host) return;
+  const counts = countAlerts(farmKeys);
+  const total = counts.dailyAlert + counts.cumAlert + counts.dailyWatch + counts.cumWatch;
+  if (total === 0) {
+    host.innerHTML = `<div class="insight good">✓ ไม่มีเล้าทะลุเกณฑ์ตายรายวัน/สะสม</div>`;
+    return;
+  }
+
+  const parts = [];
+  if (counts.cumAlert > 0) parts.push(`<b class="crit">${counts.cumAlert} เล้า</b> ตายสะสมเกิน ${MORTALITY_THRESHOLDS.cumulativePct.toFixed(1)}%`);
+  if (counts.dailyAlert > 0) parts.push(`<b class="crit">${counts.dailyAlert} เล้า</b> ตายรายวันเกิน ${(MORTALITY_THRESHOLDS.dailyPct*100).toFixed(2)}%`);
+  if (counts.cumWatch > 0) parts.push(`<b class="warn">${counts.cumWatch}</b> เฝ้าระวังตายสะสม`);
+  if (counts.dailyWatch > 0) parts.push(`<b class="warn">${counts.dailyWatch}</b> เฝ้าระวังตายรายวัน`);
+
+  const level = (counts.cumAlert + counts.dailyAlert) > 0 ? 'crit' : 'warn';
+  host.innerHTML = `
+    <div class="alert-card ${level}">
+      <div class="ac-icon">🚨</div>
+      <div class="ac-body">
+        <b>มีเล้าที่ต้องสอบสวน</b> · ${parts.join(' · ')}
+        <div class="ac-cta">เปิดแท็บ <b>ภาพรวมรายวัน</b> เพื่อดูเล้าแต่ละหลัง</div>
+      </div>
+    </div>`;
+}
+
+// ===== js/render-analysis.js =====
+// ====================================================================
+// FARMSENSE · Per-house analysis tab (วิเคราะห์เล้า)
+//
+// Each chart answers ONE question and stamps an at-a-glance verdict
+// (✓ ปกติ / ⚠ เฝ้าระวัง / 🚨 ผิดปกติ) so the operator never has to
+// decode an axis to know whether to act:
+//
+//   1. ตายรายวัน           — ตายมากเกินไปไหม?
+//   2. เช้า vs เย็น        — กระจุกตอนไหน? (heat / cold pattern)
+//   3. อุณหภูมิ            — Hi เกินเป้ากี่องศา?
+//   4. น้ำหนัก             — โตตามเกณฑ์ไหม?
+//   5. อาหาร              — กินตามเกณฑ์ไหม?
+//   6. น้ำ : อาหาร         — ดื่มน้ำปกติไหม?
+//
+// All charts are pure inline SVG (no external libs). Color semantics:
+// green = good, amber = watch, red = bad, neutral = grey.
+// ====================================================================
+
+let analysisSelection = null;  // { farmKey, houseNum }
+
+function analysisListHouses() {
+  const items = [];
+  for (const fk of Object.keys(STATE.farms)) {
+    const farm = STATE.farms[fk];
+    for (const h of farm.houses) {
+      if (h.dailyHistory && h.dailyHistory.length > 0) {
+        items.push({ farmKey: fk, farmName: farm.name, house: h });
+      }
+    }
+  }
+  return items;
+}
+
+function renderAnalysis(farmKeys) {
+  const houses = analysisListHouses();
+  const pickHost = document.getElementById('analysis-house-picker');
+  const contentHost = document.getElementById('analysis-content');
+  if (!pickHost || !contentHost) return;
+
+  const badge = document.getElementById('cnt-analysis');
+  if (badge) badge.textContent = houses.length > 0 ? houses.length : '';
+
+  if (houses.length === 0) {
+    pickHost.innerHTML = `<div class="insight">⚠ ไม่พบชีท <b>H 1...H N</b> ในไฟล์ที่อัปโหลด — แท็บนี้ต้องการรายวันจากชีทเล้า</div>`;
+    contentHost.innerHTML = '';
+    return;
+  }
+
+  if (!analysisSelection ||
+      !houses.find(x => x.farmKey === analysisSelection.farmKey &&
+                        Number(x.house.house) === analysisSelection.houseNum)) {
+    analysisSelection = { farmKey: houses[0].farmKey, houseNum: Number(houses[0].house.house) };
+  }
+
+  const byFarm = {};
+  for (const x of houses) (byFarm[x.farmKey] = byFarm[x.farmKey] || []).push(x);
+
+  pickHost.innerHTML = Object.entries(byFarm).map(([fk, list]) => {
+    const farmShort = escapeHtml(list[0].farmName.replace('ฟาร์ม',''));
+    const pills = list.map(x => {
+      const n = Number(x.house.house);
+      const active = (analysisSelection.farmKey === fk && analysisSelection.houseNum === n);
+      const age = x.house.age != null ? `· ${x.house.age}d` : '';
+      const days = x.house.dailyHistory.length;
+      return `<button class="ana-pill ${active ? 'active' : ''}"
+                 data-farm="${fk}" data-house="${n}">
+        เล้า ${escapeHtml(String(x.house.house))} <small>${age} · ${days} วัน</small>
+      </button>`;
+    }).join('');
+    return `<div class="ana-farm-group">
+      <div class="ana-farm-label"><span class="pill ${getFarmClass(fk, Object.keys(STATE.farms))}">${farmShort}</span></div>
+      <div class="ana-pills">${pills}</div>
+    </div>`;
+  }).join('');
+
+  pickHost.querySelectorAll('.ana-pill').forEach(btn => {
+    btn.onclick = () => {
+      analysisSelection = {
+        farmKey: btn.dataset.farm,
+        houseNum: parseInt(btn.dataset.house, 10),
+      };
+      renderAnalysis(farmKeys);
+    };
+  });
+
+  const sel = houses.find(x =>
+    x.farmKey === analysisSelection.farmKey &&
+    Number(x.house.house) === analysisSelection.houseNum);
+  if (!sel) { contentHost.innerHTML = ''; return; }
+  contentHost.innerHTML = buildAnalysisContent(sel);
+}
+
+// ====================================================================
+// SVG toolkit — minimal helpers, intentional whitespace.
+// ====================================================================
+
+const ANA_W = 620, ANA_H = 200, ANA_M = { l: 42, r: 14, t: 14, b: 26 };
+const COL = {
+  navy: '#16284a', blue: '#2b7fd4', bluesoft: '#5b9fe0', blueLight: '#cfe0f5', blueBg: '#eaf2fb',
+  red: '#d62828', redSoft: '#e85d5d', redBg: '#fdecec',
+  green: '#2e7d4f', greenSoft: '#4fa873', greenBg: '#e8f5ed',
+  amber: '#c8860b', amberSoft: '#e3a92e', amberBg: '#fbf1da',
+  ink: '#1a2233', inkSoft: '#46526b', inkMute: '#8a94a8',
+  grid: '#eef2f7', neutralBar: '#cbd5e1',
+};
+
+function plotArea() {
+  return { x0: ANA_M.l, x1: ANA_W - ANA_M.r, y0: ANA_M.t, y1: ANA_H - ANA_M.b };
+}
+
+function makeScales(days, yMin, yMax) {
+  const a = plotArea();
+  const dayMin = days[0], dayMax = days[days.length - 1];
+  const span = Math.max(1, dayMax - dayMin);
+  return {
+    px: d => a.x0 + ((d - dayMin) / span) * (a.x1 - a.x0),
+    py: v => v == null ? null : a.y1 - ((v - yMin) / (yMax - yMin)) * (a.y1 - a.y0),
+    dayMin, dayMax, yMin, yMax, area: a,
+  };
+}
+
+function pickXTicks(days) {
+  if (days.length === 0) return [];
+  const first = days[0], last = days[days.length - 1];
+  if (last - first <= 7) return days.filter((_, i, arr) => i === 0 || i === arr.length - 1 || i % Math.ceil(arr.length / 5) === 0);
+  return [first, Math.round((first + last) / 4), Math.round((first + last) / 2), Math.round((first + last) * 3 / 4), last];
+}
+
+function svgFrame(title, body, opts = {}) {
+  const status = opts.status || 'neutral';
+  const badge  = opts.badge  || '';
+  const headlineHtml = opts.headline ? `
+    <div class="ana-headline">
+      <div class="ana-headline-big">${opts.headline}</div>
+      ${opts.subtitle ? `<div class="ana-headline-sub">${opts.subtitle}</div>` : ''}
+    </div>` : '';
+  return `
+    <div class="ana-card status-${status}">
+      <div class="ana-card-head">
+        <h4>${title}</h4>
+        ${badge ? `<span class="ana-badge status-${status}">${badge}</span>` : ''}
+      </div>
+      ${headlineHtml}
+      <svg viewBox="0 0 ${ANA_W} ${ANA_H}" preserveAspectRatio="xMidYMid meet"
+           class="ana-svg" role="img" aria-label="${escapeHtml(typeof title === 'string' ? title : '')}">
+        ${body}
+      </svg>
+      ${opts.takeaway ? `<div class="ana-takeaway">💡 ${opts.takeaway}</div>` : ''}
+    </div>`;
+}
+
+function drawAxes(scales, yTicks, xTicks) {
+  const grid = yTicks.map(v => {
+    const y = scales.py(v);
+    return `<line x1="${scales.area.x0}" x2="${scales.area.x1}" y1="${y}" y2="${y}"
+                  stroke="${COL.grid}" stroke-width="1"/>
+            <text x="${scales.area.x0 - 6}" y="${y + 3}" text-anchor="end"
+                  font-family="JetBrains Mono, monospace" font-size="9" fill="${COL.inkMute}">${v}</text>`;
+  }).join('');
+  const xax = xTicks.map(d => {
+    const x = scales.px(d);
+    return `<text x="${x}" y="${scales.area.y1 + 12}" text-anchor="middle"
+                  font-family="JetBrains Mono, monospace" font-size="9" fill="${COL.inkMute}">${d}</text>`;
+  }).join('');
+  return grid + xax;
+}
+
+function linePath(points, scales) {
+  let path = ''; let pen = 'M';
+  for (const [x, y] of points) {
+    if (y == null) { pen = 'M'; continue; }
+    const py = scales.py(y);
+    if (py == null) { pen = 'M'; continue; }
+    path += `${pen}${scales.px(x).toFixed(2)},${py.toFixed(2)} `;
+    pen = 'L';
+  }
+  return path.trim();
+}
+
+// ====================================================================
+// Chart 1 · ตายรายวัน — focus on daily bars colored by alert level
+// ====================================================================
+function chartMortality(daily) {
+  const days = daily.map(d => d.day);
+  const losses = daily.map(d => d.total_loss || 0);
+  const last = daily[daily.length - 1];
+  // Compute cumulative loss + initial stock for headline
+  const cumTotal = losses.reduce((s, v) => s + v, 0);
+  const initRem = (last.qty_rem || 0) + cumTotal;
+  const cumPct = initRem ? (cumTotal / initRem) * 100 : 0;
+  const lastDailyPct = last.qty_rem ? (last.total_loss / last.qty_rem) * 100 : 0;
+
+  // Status from cumulative %
+  let status, badge;
+  if (cumPct >= 3)         { status = 'bad';  badge = '🚨 เกิน 3%'; }
+  else if (cumPct >= 2.5)  { status = 'warn'; badge = '⚠ ใกล้เกณฑ์'; }
+  else                     { status = 'good'; badge = '✓ ปกติ'; }
+
+  // Find top spike day
+  const avg = losses.reduce((s,v)=>s+v,0) / Math.max(1, losses.length);
+  let spike = null;
+  daily.forEach(d => {
+    if ((d.total_loss||0) >= 30 && (d.total_loss||0) >= avg * 2 &&
+        (!spike || (d.total_loss||0) > (spike.total_loss||0))) spike = d;
+  });
+
+  const maxLoss = Math.max(10, ...losses);
+  const scales = makeScales(days, 0, maxLoss * 1.20);
+  const w = Math.max(4, (scales.area.x1 - scales.area.x0) / daily.length * 0.78);
+  const bars = daily.map(d => {
+    const v = d.total_loss || 0;
+    const x = scales.px(d.day);
+    const y = scales.py(v);
+    const h = scales.area.y1 - y;
+    const pct = d.qty_rem ? v / d.qty_rem : 0;
+    let fill;
+    if (pct >= MORTALITY_THRESHOLDS.dailyPct)        fill = COL.red;
+    else if (pct >= MORTALITY_THRESHOLDS.warnDailyPct) fill = COL.amber;
+    else                                              fill = COL.greenSoft;
+    return `<rect x="${x - w/2}" y="${y}" width="${w}" height="${h}" fill="${fill}" rx="1.5" opacity="0.92"/>`;
+  }).join('');
+
+  // Annotate top spike
+  let annotation = '';
+  if (spike) {
+    const x = scales.px(spike.day);
+    const y = scales.py(spike.total_loss);
+    annotation = `
+      <text x="${x}" y="${y - 6}" text-anchor="middle"
+            font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="${COL.red}">
+        ${spike.total_loss}
+      </text>`;
+  }
+
+  const yTicks = niceTicks(0, scales.yMax, 3);
+  const axes = drawAxes(scales, yTicks, pickXTicks(days));
+
+  const takeaway = spike
+    ? `วัน spike สูงสุด: <b>Day ${spike.day}</b> สูญเสีย ${spike.total_loss} ตัว (${(spike.total_loss/avg).toFixed(1)}× เฉลี่ย)`
+    : `ไม่มี spike ผิดปกติ — สูญเสียกระจายสม่ำเสมอ เฉลี่ย ${avg.toFixed(0)} ตัว/วัน`;
+
+  return svgFrame('📉 ตายรายวัน', `${axes}${bars}${annotation}`, {
+    status, badge,
+    headline: `${cumPct.toFixed(2)}<small>% สะสม</small> · <span class="num-secondary">${last.total_loss || 0} ตัว</span><small> วันล่าสุด</small>`,
+    subtitle: `แท่งสีตามเกณฑ์รายวัน · 🟢&lt;0.07% · 🟡 0.07-0.10% · 🔴≥0.10%`,
+    takeaway,
+  });
+}
+
+// ====================================================================
+// Chart 2 · เช้า vs เย็น — pattern recognition
+// ====================================================================
+function chartAmPm(daily) {
+  const days = daily.map(d => d.day);
+  const am = daily.map(d => (d.m_died||0) + (d.m_culled||0));
+  const pm = daily.map(d => (d.e_died||0) + (d.e_culled||0));
+  const amTotal = am.reduce((s,v)=>s+v,0);
+  const pmTotal = pm.reduce((s,v)=>s+v,0);
+  const total = amTotal + pmTotal;
+
+  if (total === 0) {
+    return svgFrame('🌅 เช้า vs เย็น',
+      `<text x="${ANA_W/2}" y="${ANA_H/2}" text-anchor="middle" fill="${COL.inkMute}"
+             font-family="IBM Plex Sans Thai">ไม่มีข้อมูลการสูญเสียในช่วงนี้</text>`,
+      { status: 'neutral', badge: '–', headline: '0 ตัว', subtitle: 'ไม่พบบันทึกตาย/คัด' });
+  }
+
+  const pmShare = pmTotal / total * 100;
+  let status, badge, pattern, takeaway;
+  if (pmTotal > amTotal * 1.5) {
+    status = 'warn'; badge = '⚠ เย็นหนัก'; pattern = 'HEAT';
+    takeaway = `เย็น <b>${pmShare.toFixed(0)}%</b> ของทั้งหมด — สงสัย <b>heat stress</b> · เช็คอุณหภูมิ+ลมช่วงบ่าย`;
+  } else if (amTotal > pmTotal * 1.5) {
+    status = 'warn'; badge = '⚠ เช้าหนัก'; pattern = 'NIGHT';
+    takeaway = `เช้า <b>${(100-pmShare).toFixed(0)}%</b> ของทั้งหมด — สงสัย<b>หนาว/ปัญหากลางคืน</b> · เช็คอุณหภูมิตอนเช้า`;
+  } else {
+    status = 'good'; badge = '✓ สม่ำเสมอ'; pattern = 'EVEN';
+    takeaway = `สัดส่วนเช้า:เย็น = ${(100-pmShare).toFixed(0)}:${pmShare.toFixed(0)} — สมดุล ไม่บ่งชี้ปัญหาเฉพาะช่วง`;
+  }
+
+  const maxV = Math.max(5, ...am, ...pm);
+  const scales = makeScales(days, 0, maxV * 1.15);
+  const w = Math.max(3, (scales.area.x1 - scales.area.x0) / daily.length * 0.36);
+
+  // Paired bars: AM (blue) on the left of day, PM (amber) on the right
+  const bars = daily.map((d,i) => {
+    const x = scales.px(d.day);
+    const yAm = scales.py(am[i]);
+    const yPm = scales.py(pm[i]);
+    return `
+      <rect x="${x - w}" y="${yAm}" width="${w-0.5}" height="${scales.area.y1 - yAm}"
+            fill="${COL.bluesoft}" rx="1"/>
+      <rect x="${x + 0.5}" y="${yPm}" width="${w-0.5}" height="${scales.area.y1 - yPm}"
+            fill="${COL.amberSoft}" rx="1"/>`;
+  }).join('');
+
+  const yTicks = niceTicks(0, scales.yMax, 3);
+  const axes = drawAxes(scales, yTicks, pickXTicks(days));
+
+  return svgFrame('🌅 เช้า vs เย็น', `${axes}${bars}`, {
+    status, badge,
+    headline: `<span style="color:${COL.bluesoft}">${amTotal}</span><small> เช้า</small> · <span style="color:${COL.amber}">${pmTotal}</small><small> เย็น</small>`,
+    subtitle: `สัดส่วน <b>${(100-pmShare).toFixed(0)}% : ${pmShare.toFixed(0)}%</b> รวม ${total} ตัว`,
+    takeaway,
+  });
+}
+
+// ====================================================================
+// Chart 3 · อุณหภูมิ — show DEVIATION from farm target, not absolute °C
+// ====================================================================
+function chartTemperature(daily) {
+  const days = daily.map(d => d.day);
+  // Deviation series: Hi-target  (positive = hot),  target-Lo (positive = cold)
+  const dvHi = daily.map(d => {
+    if (d.temp_hi == null) return null;
+    const t = farmTempLookup(d.day);
+    return t != null ? d.temp_hi - t : null;
+  });
+  const dvLo = daily.map(d => {
+    if (d.temp_lo == null) return null;
+    const t = farmTempLookup(d.day);
+    return t != null ? d.temp_lo - t : null;
+  });
+  const filtered = [...dvHi, ...dvLo].filter(v => v != null);
+  if (filtered.length === 0) {
+    return svgFrame('🌡️ อุณหภูมิเทียบเป้า',
+      `<text x="${ANA_W/2}" y="${ANA_H/2}" text-anchor="middle" fill="${COL.inkMute}"
+             font-family="IBM Plex Sans Thai">ไม่มีบันทึกอุณหภูมิ</text>`,
+      { status: 'neutral', badge: '–', headline: '–' });
+  }
+
+  const hot = dvHi.filter(v => v != null && v > 2).length;
+  const cold = dvLo.filter(v => v != null && v < -2).length;
+  const hiAvg = dvHi.filter(v => v != null).reduce((s,v)=>s+v,0) / Math.max(1, dvHi.filter(v=>v!=null).length);
+  const loAvg = dvLo.filter(v => v != null).reduce((s,v)=>s+v,0) / Math.max(1, dvLo.filter(v=>v!=null).length);
+
+  let status, badge, takeaway;
+  if (hot >= daily.length * 0.5) {
+    status = 'bad'; badge = '🚨 ร้อน ' + hot + ' วัน';
+    takeaway = `Hi เกินเป้าเฉลี่ย <b>+${hiAvg.toFixed(1)}°C</b> · เพิ่ม FPM + cooling pad`;
+  } else if (hot >= daily.length * 0.3 || cold >= daily.length * 0.3) {
+    status = 'warn'; badge = `⚠ เกิน ${hot+cold} วัน`;
+    takeaway = `เกินเป้า ${hot} วัน · ต่ำกว่าเป้า ${cold} วัน · ปรับ ventilation`;
+  } else {
+    status = 'good'; badge = '✓ คุมได้';
+    takeaway = `อุณหภูมิคุมได้ตามเป้าฟาร์ม — Hi เฉลี่ย +${hiAvg.toFixed(1)}°C`;
+  }
+
+  // Symmetric y-axis around 0
+  const extreme = Math.max(2, ...filtered.map(Math.abs));
+  const yMax = Math.ceil(extreme + 0.5);
+  const scales = makeScales(days, -yMax, yMax);
+
+  // Safe band ±2°C
+  const safeTop = scales.py(2);
+  const safeBot = scales.py(-2);
+  const safe = `<rect x="${scales.area.x0}" y="${safeTop}" width="${scales.area.x1 - scales.area.x0}"
+                       height="${safeBot - safeTop}" fill="${COL.greenBg}" opacity="0.6"/>`;
+  // Zero line (target)
+  const zeroLine = `<line x1="${scales.area.x0}" x2="${scales.area.x1}"
+                          y1="${scales.py(0)}" y2="${scales.py(0)}"
+                          stroke="${COL.green}" stroke-width="1.5"/>`;
+
+  const hiLine = linePath(daily.map((d,i) => [d.day, dvHi[i]]), scales);
+  const loLine = linePath(daily.map((d,i) => [d.day, dvLo[i]]), scales);
+
+  const yTicks = [-yMax, -2, 0, 2, yMax].filter((v,i,a) => a.indexOf(v) === i);
+  const axes = drawAxes(scales, yTicks, pickXTicks(days));
+
+  return svgFrame('🌡️ อุณหภูมิเทียบเป้า', `${safe}${axes}${zeroLine}
+    <path d="${hiLine}" fill="none" stroke="${COL.red}" stroke-width="2"/>
+    <path d="${loLine}" fill="none" stroke="${COL.blue}" stroke-width="2"/>`, {
+    status, badge,
+    headline: `Hi เฉลี่ย <span style="color:${COL.red}">+${hiAvg.toFixed(1)}°C</span> · Lo เฉลี่ย <span style="color:${COL.blue}">${loAvg >= 0 ? '+' : ''}${loAvg.toFixed(1)}°C</span>`,
+    subtitle: `แถบเขียว = ภายในเกณฑ์ ±2°C · เส้นแดง = Hi · เส้นน้ำเงิน = Lo`,
+    takeaway,
+  });
+}
+
+// ====================================================================
+// Chart 4 · น้ำหนัก vs คละเพศ — actual line + dashed STD line
+// ====================================================================
+function chartWeight(daily) {
+  const days = daily.map(d => d.day);
+  const actuals = daily.map(d => d.weight);
+  const haveWt = actuals.filter(v => v != null && v > 0);
+  if (haveWt.length === 0) {
+    return svgFrame('⚖️ น้ำหนัก vs เกณฑ์',
+      `<text x="${ANA_W/2}" y="${ANA_H/2}" text-anchor="middle" fill="${COL.inkMute}"
+             font-family="IBM Plex Sans Thai">ยังไม่มีการชั่งน้ำหนัก</text>`,
+      { status: 'neutral', badge: '–', headline: '–' });
+  }
+  // Latest actual weight & deviation
+  let lastWt = null, lastWtDay = null;
+  for (let i = daily.length - 1; i >= 0; i--) {
+    if (daily[i].weight != null && daily[i].weight > 0) {
+      lastWt = daily[i].weight; lastWtDay = daily[i].day; break;
+    }
+  }
+  const stdAtLast = mixedBwLookup(lastWtDay);
+  const devPct = stdAtLast ? ((lastWt - stdAtLast) / stdAtLast) * 100 : null;
+  let status, badge, takeaway;
+  if (devPct == null)                    { status = 'neutral'; badge = '–'; takeaway = ''; }
+  else if (devPct < -10)                 { status = 'bad';  badge = '🚨 โตช้ามาก'; }
+  else if (devPct < -5)                  { status = 'warn'; badge = '⚠ โตช้า'; }
+  else if (devPct > 5)                   { status = 'good'; badge = '✓ โตเร็ว'; }
+  else                                   { status = 'good'; badge = '✓ ตามเกณฑ์'; }
+  takeaway = devPct == null
+    ? 'รอข้อมูลน้ำหนักเพิ่มเติม'
+    : devPct < -5
+      ? `Day ${lastWtDay}: หนัก ${lastWt.toFixed(2)} กก. ต่ำกว่าเกณฑ์ <b>${Math.abs(devPct).toFixed(1)}%</b> — เช็คอาหาร/โรค`
+      : devPct > 5
+        ? `Day ${lastWtDay}: หนัก ${lastWt.toFixed(2)} กก. สูงกว่าเกณฑ์ <b>${devPct.toFixed(1)}%</b> · ดีมาก`
+        : `Day ${lastWtDay}: หนัก ${lastWt.toFixed(2)} กก. ตามเกณฑ์ (${devPct >= 0 ? '+' : ''}${devPct.toFixed(1)}%)`;
+
+  const stdSeries = days.map(d => [d, mixedBwLookup(d)]);
+  const allVals = [...haveWt, ...stdSeries.map(p => p[1]).filter(v => v != null)];
+  const yMax = Math.max(...allVals) * 1.1;
+  const scales = makeScales(days, 0, yMax);
+
+  const actLine = linePath(daily.map(d => [d.day, d.weight]), scales);
+  const stdLine = linePath(stdSeries, scales);
+
+  // Big marker on the latest measurement
+  const lastMarker = lastWtDay != null
+    ? `<circle cx="${scales.px(lastWtDay)}" cy="${scales.py(lastWt)}" r="5" fill="${COL.blue}"/>
+       <circle cx="${scales.px(lastWtDay)}" cy="${scales.py(lastWt)}" r="10" fill="${COL.blue}" opacity="0.18"/>` : '';
+
+  const yTicks = niceTicks(0, yMax, 3);
+  const axes = drawAxes(scales, yTicks, pickXTicks(days));
+
+  return svgFrame('⚖️ น้ำหนัก vs เกณฑ์', `${axes}
+    <path d="${stdLine}" fill="none" stroke="${COL.inkMute}" stroke-width="1.8" stroke-dasharray="4 3"/>
+    <path d="${actLine}" fill="none" stroke="${COL.blue}" stroke-width="2.4"/>
+    ${lastMarker}`, {
+    status, badge,
+    headline: lastWt ? `${lastWt.toFixed(2)}<small> กก. · Day ${lastWtDay}</small>` : '–',
+    subtitle: stdAtLast ? `เกณฑ์คละเพศ Day ${lastWtDay}: ${stdAtLast.toFixed(2)} กก. (${devPct >= 0 ? '+' : ''}${devPct.toFixed(1)}%)` : '',
+    takeaway,
+  });
+}
+
+// ====================================================================
+// Chart 5 · อาหาร — show deviation% from farm target (clearer than abs g)
+// ====================================================================
+function chartFeed(daily) {
+  const days = daily.map(d => d.day);
+  const devs = daily.map(d => {
+    if (d.feed_used == null || !d.qty_rem || d.qty_rem === 0) return null;
+    const g = (d.feed_used * 1000) / d.qty_rem;
+    const std = farmFeedLookup(d.day);
+    if (!std || std === 0) return null;
+    return ((g - std) / std) * 100;
+  });
+  const have = devs.filter(v => v != null);
+  if (have.length === 0) {
+    return svgFrame('🌾 อาหาร vs เกณฑ์',
+      `<text x="${ANA_W/2}" y="${ANA_H/2}" text-anchor="middle" fill="${COL.inkMute}"
+             font-family="IBM Plex Sans Thai">ไม่มีข้อมูลอาหารใช้จริง</text>`,
+      { status: 'neutral', badge: '–', headline: '–' });
+  }
+  const avgDev = have.reduce((s,v)=>s+v,0) / have.length;
+  const lowDays = devs.filter(v => v != null && v < -10).length;
+  let status, badge, takeaway;
+  if (lowDays >= 3)             { status = 'bad';  badge = `🚨 ขาด ${lowDays} วัน`; }
+  else if (lowDays >= 1)         { status = 'warn'; badge = `⚠ ขาด ${lowDays} วัน`; }
+  else if (avgDev > 8)           { status = 'warn'; badge = '⚠ กินเกิน'; }
+  else                           { status = 'good'; badge = '✓ พอดี'; }
+  const lastDev = (() => {
+    for (let i = daily.length - 1; i >= 0; i--) if (devs[i] != null) return devs[i];
+    return null;
+  })();
+  takeaway = lowDays > 0
+    ? `${lowDays} วันที่กินน้อยกว่าเกณฑ์ &gt;10% — เสี่ยงป่วย/น้ำหนักไม่ขึ้น`
+    : avgDev > 8
+      ? `กินเกินเกณฑ์เฉลี่ย +${avgDev.toFixed(0)}% — ตรวจน้ำหนัก, อาจให้อาหารฟุ่มเฟือย`
+      : `กินตามเกณฑ์ฟาร์มตลอด · เฉลี่ย ${avgDev >= 0 ? '+' : ''}${avgDev.toFixed(0)}%`;
+
+  // Symmetric y axis around 0, range −25 to +25 unless data exceeds
+  const yMax = Math.max(15, ...have.map(Math.abs)) + 5;
+  const scales = makeScales(days, -yMax, yMax);
+
+  // Tolerance band ±5%
+  const top = scales.py(5), bot = scales.py(-5);
+  const safe = `<rect x="${scales.area.x0}" y="${top}" width="${scales.area.x1-scales.area.x0}"
+                       height="${bot-top}" fill="${COL.greenBg}" opacity="0.6"/>`;
+  // Zero line
+  const zero = `<line x1="${scales.area.x0}" x2="${scales.area.x1}"
+                       y1="${scales.py(0)}" y2="${scales.py(0)}"
+                       stroke="${COL.green}" stroke-width="1.5"/>`;
+  // Bars from zero line, colored by zone
+  const w = Math.max(3, (scales.area.x1 - scales.area.x0) / daily.length * 0.75);
+  const bars = daily.map((d,i) => {
+    const v = devs[i]; if (v == null) return '';
+    const x = scales.px(d.day);
+    const y0 = scales.py(0);
+    const y1 = scales.py(v);
+    let fill;
+    if (v < -10) fill = COL.red;
+    else if (v < -5) fill = COL.amber;
+    else if (v > 8) fill = COL.amberSoft;
+    else fill = COL.greenSoft;
+    return `<rect x="${x - w/2}" y="${Math.min(y0,y1)}" width="${w}" height="${Math.abs(y1-y0)}" fill="${fill}" opacity="0.85" rx="1"/>`;
+  }).join('');
+
+  const yTicks = [-yMax, -10, -5, 0, 5, 10, yMax].filter((v,i,a) => a.indexOf(v)===i && v >= -yMax && v <= yMax);
+  const axes = drawAxes(scales, yTicks, pickXTicks(days));
+
+  return svgFrame('🌾 อาหาร vs เกณฑ์ฟาร์ม', `${safe}${axes}${zero}${bars}`, {
+    status, badge,
+    headline: lastDev != null
+      ? `${lastDev >= 0 ? '+' : ''}${lastDev.toFixed(0)}<small>% เทียบเป้า</small>`
+      : '–',
+    subtitle: `แถบเขียว = ±5% (พอดี) · แดง = &lt;−10% เสี่ยงป่วย · เหลือง = ขาด−5 ถึง−10%`,
+    takeaway,
+  });
+}
+
+// ====================================================================
+// Chart 6 · น้ำ : อาหาร — safe band 1.5-2.4, line over time
+// ====================================================================
+function chartWaterFeed(daily) {
+  const days = daily.map(d => d.day);
+  const ratios = daily.map(d => {
+    if (!d.water || !d.feed_used || d.feed_used === 0) return null;
+    const r = d.water / d.feed_used;
+    return (r > 0.3 && r < 6) ? r : null;
+  });
+  const have = ratios.filter(v => v != null);
+  if (have.length === 0) {
+    // Tell the operator WHY there's nothing to show — they often have a
+    // water column filled with "15" liters that's clearly a typo.
+    const rawValues = daily.map(d => d.water).filter(v => v != null);
+    const reason = rawValues.length > 0 && rawValues.every(v => v < 50)
+      ? 'ค่าน้ำต้นทางต่ำผิดปกติ (เช่น 15 ลิตร/วัน) — น่าจะเป็นข้อมูลผิดหน่วย'
+      : 'ไม่มีข้อมูลน้ำหรืออาหาร';
+    return svgFrame('💧 น้ำ : อาหาร',
+      `<text x="${ANA_W/2}" y="${ANA_H/2}" text-anchor="middle" fill="${COL.inkMute}"
+             font-family="IBM Plex Sans Thai">${escapeHtml(reason)}</text>`,
+      { status: 'neutral', badge: '–', headline: '–',
+        subtitle: 'มาตรฐาน 1.5–2.4 · ต่ำ = ดื่มน้อย · สูง = heat/ท้องเสีย',
+        takeaway: 'ตรวจสอบหน่วยข้อมูลน้ำในไฟล์ Excel — ควรเป็นลิตรต่อวันทั้งเล้า' });
+  }
+
+  // Latest + average ratio
+  let lastR = null;
+  for (let i = ratios.length - 1; i >= 0; i--) if (ratios[i] != null) { lastR = ratios[i]; break; }
+  const avgR = have.reduce((s,v)=>s+v,0) / have.length;
+  const off = ratios.filter(v => v != null && (v < 1.5 || v > 2.4)).length;
+  let status, badge, takeaway;
+  if (off >= daily.length * 0.4)         { status = 'bad';  badge = `🚨 ออกนอกเกณฑ์ ${off} วัน`; }
+  else if (off >= daily.length * 0.2)    { status = 'warn'; badge = `⚠ ออกนอก ${off} วัน`; }
+  else                                   { status = 'good'; badge = '✓ ปกติ'; }
+  takeaway = lastR == null ? '' :
+    lastR < 1.5 ? `ล่าสุด ${lastR.toFixed(2)} — ไก่ดื่มน้อย · เช็คน้ำ/หัวจ่าย/สุขภาพ` :
+    lastR > 2.4 ? `ล่าสุด ${lastR.toFixed(2)} — heat stress หรือท้องเสีย · เช็คอุณหภูมิ` :
+                  `เฉลี่ย ${avgR.toFixed(2)} อยู่ในเกณฑ์ปกติ 1.5–2.4`;
+
+  const yMin = 0;
+  const yMax = Math.max(3.5, ...have) * 1.1;
+  const scales = makeScales(days, yMin, yMax);
+  const top = scales.py(2.4), bot = scales.py(1.5);
+  const band = `<rect x="${scales.area.x0}" y="${top}" width="${scales.area.x1-scales.area.x0}"
+                       height="${bot-top}" fill="${COL.greenBg}" opacity="0.7"/>`;
+  const line = linePath(days.map((d,i) => [d, ratios[i]]), scales);
+
+  // Off-band markers
+  const markers = days.map((d,i) => {
+    const r = ratios[i]; if (r == null) return '';
+    if (r < 1.5)  return `<circle cx="${scales.px(d)}" cy="${scales.py(r)}" r="3" fill="${COL.red}"/>`;
+    if (r > 2.4)  return `<circle cx="${scales.px(d)}" cy="${scales.py(r)}" r="3" fill="${COL.amber}"/>`;
+    return '';
+  }).join('');
+
+  const yTicks = [0, 1.5, 2.4, Math.round(yMax)].filter((v,i,a) => a.indexOf(v)===i);
+  const axes = drawAxes(scales, yTicks, pickXTicks(days));
+
+  return svgFrame('💧 น้ำ : อาหาร', `${band}${axes}
+    <path d="${line}" fill="none" stroke="${COL.blue}" stroke-width="2.2"/>
+    ${markers}`, {
+    status, badge,
+    headline: lastR != null ? `${lastR.toFixed(2)}<small> ratio</small>` : '–',
+    subtitle: `แถบเขียว = 1.5-2.4 (สุขภาพดี) · จุดแดง=ดื่มน้อย · จุดเหลือง=ดื่มเยอะ`,
+    takeaway,
+  });
+}
+
+// ====================================================================
+// Problem detection — surfaces specific days the operator should review.
+// ====================================================================
+function detectProblems(daily) {
+  const bullets = [];
+  const losses = daily.map(d => d.total_loss || 0);
+  const avg = losses.reduce((s,v)=>s+v,0) / Math.max(1, losses.length);
+  // Mortality spikes (3x avg AND ≥30)
+  daily.forEach(d => {
+    if ((d.total_loss||0) >= 3 * avg && (d.total_loss||0) >= 30) {
+      bullets.push(`<b class="bad">Day ${d.day}:</b> สูญเสีย ${d.total_loss} ตัว (${((d.total_loss||0)/avg).toFixed(1)}× เฉลี่ย)`);
+    }
+  });
+  // Daily death rate breaches
+  const dailyAlerts = [];
+  daily.forEach(d => {
+    if (!d.qty_rem || !d.total_loss) return;
+    const pct = d.total_loss / d.qty_rem;
+    if (pct >= MORTALITY_THRESHOLDS.dailyPct) dailyAlerts.push({ day: d.day, pct });
+  });
+  if (dailyAlerts.length > 0) {
+    const top = dailyAlerts.slice(0, 5).map(a => `Day ${a.day} ${(a.pct*100).toFixed(2)}%`).join(' · ');
+    const more = dailyAlerts.length > 5 ? ` +อีก ${dailyAlerts.length - 5}` : '';
+    bullets.push(`<b class="bad">วันที่ตายทะลุเกณฑ์ ${MORTALITY_THRESHOLDS.dailyPct*100}%/วัน:</b> ${top}${more}`);
+  }
+  // Weight behind
+  const behind = [];
+  daily.forEach(d => {
+    if (d.weight == null) return;
+    const std = mixedBwLookup(d.day);
+    if (!std) return;
+    const dev = ((d.weight - std) / std) * 100;
+    if (dev < -5) behind.push({ day: d.day, dev });
+  });
+  if (behind.length > 0) {
+    const worst = behind.reduce((a,b) => b.dev < a.dev ? b : a);
+    bullets.push(`<b class="warn">น้ำหนักต่ำกว่าเกณฑ์:</b> ${behind.length} จุดที่ชั่ง (แย่สุด Day ${worst.day}: ${worst.dev.toFixed(1)}%)`);
+  }
+  // Feed shortfall
+  const feedShort = [];
+  daily.forEach(d => {
+    if (!d.feed_used || !d.qty_rem) return;
+    const g = (d.feed_used * 1000) / d.qty_rem;
+    const std = farmFeedLookup(d.day);
+    if (!std) return;
+    const dev = ((g - std) / std) * 100;
+    if (dev < -10) feedShort.push({ day: d.day, dev });
+  });
+  if (feedShort.length > 0) {
+    bullets.push(`<b class="warn">วันที่กินอาหารน้อยกว่าเกณฑ์ &gt;10%:</b> ${feedShort.slice(0,6).map(d => 'Day '+d.day).join(', ')}${feedShort.length > 6 ? '...' : ''}`);
+  }
+  // Temperature consistently over target
+  let hotDays = 0;
+  daily.forEach(d => {
+    const t = farmTempLookup(d.day);
+    if (t == null || d.temp_hi == null) return;
+    if (d.temp_hi > t + 3) hotDays++;
+  });
+  if (hotDays > daily.length * 0.5) {
+    bullets.push(`<b class="warn">Hi เกินเป้า &gt;3°C ใน ${hotDays}/${daily.length} วัน:</b> ระบบทำความเย็นไม่พอ — เพิ่ม FPM/cooling pad`);
+  }
+  return bullets;
+}
+
+// ---------- Container ----------
+function buildAnalysisContent(sel) {
+  const farm = STATE.farms[sel.farmKey];
+  const h = sel.house;
+  const daily = h.dailyHistory;
+  const ageNow = h.age != null ? h.age : daily[daily.length - 1]?.day;
+
+  const last = daily[daily.length - 1];
+  const cumLoss = daily.reduce((s, d) => s + (d.total_loss || 0), 0);
+  const initRem = (last.qty_rem || 0) + cumLoss;
+  const cumPct = initRem ? (cumLoss / initRem) * 100 : 0;
+  const cumCls = cumPct >= 3 ? 'bad' : cumPct >= 2.5 ? 'warn' : 'good';
+  const todayLoss = last.total_loss || 0;
+  const todayPct = last.qty_rem ? (todayLoss / last.qty_rem) * 100 : 0;
+  const todayCls = todayPct >= 0.1 ? 'bad' : todayPct >= 0.07 ? 'warn' : 'good';
+
+  const kpi = `
+    <div class="ana-kpi">
+      <div class="ana-kpi-item">
+        <div class="lab">วันที่ปัจจุบัน</div>
+        <div class="val">${last.day}</div>
+        <div class="sub">${daily.length} วันข้อมูล</div>
+      </div>
+      <div class="ana-kpi-item">
+        <div class="lab">ยอดเริ่ม → คงเหลือ</div>
+        <div class="val">${fmtNum(last.qty_rem)}</div>
+        <div class="sub">จาก ${fmtNum(initRem)}</div>
+      </div>
+      <div class="ana-kpi-item">
+        <div class="lab">สูญเสียสะสม</div>
+        <div class="val ${cumCls}">${cumPct.toFixed(2)}%</div>
+        <div class="sub">${fmtNum(cumLoss)} ตัว · เกณฑ์ 3%</div>
+      </div>
+      <div class="ana-kpi-item">
+        <div class="lab">สูญเสียวันล่าสุด</div>
+        <div class="val ${todayCls}">${todayPct.toFixed(3)}%</div>
+        <div class="sub">${fmtNum(todayLoss)} ตัว · เกณฑ์ 0.10%</div>
+      </div>
+    </div>`;
+
+  const problems = detectProblems(daily);
+  const problemsHtml = problems.length === 0
+    ? `<div class="insight good">✓ ไม่พบความผิดปกติชัดเจนตลอดรุ่นนี้</div>`
+    : `<div class="ana-problems"><h4>⚠ ปัญหาที่ตรวจพบ <small>· ${problems.length} จุด</small></h4>
+        <ul>${problems.map(p => `<li>${p}</li>`).join('')}</ul></div>`;
+
+  const charts = `
+    <div class="ana-grid">
+      ${chartMortality(daily)}
+      ${chartAmPm(daily)}
+      ${chartTemperature(daily)}
+      ${chartWeight(daily)}
+      ${chartFeed(daily)}
+      ${chartWaterFeed(daily)}
+    </div>`;
+
+  return `
+    <div class="ana-header">
+      <h3>${escapeHtml(farm.name)} · เล้า ${escapeHtml(String(h.house))}
+        <small>· อายุ ${ageNow} วัน${h.source ? ' · ' + escapeHtml(h.source) : ''}</small></h3>
+    </div>
+    ${kpi}
+    ${problemsHtml}
+    ${charts}`;
+}
+
+// ---------- Util ----------
+function niceTicks(min, max, count) {
+  const span = max - min;
+  const step0 = span / Math.max(1, count);
+  const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+  const norm = step0 / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const out = [];
+  for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) {
+    out.push(Number(v.toFixed(4)));
+  }
+  return out;
+}
+
 // ===== js/render-history.js =====
 // ====================================================================
 // FARMSENSE · History & Trend tab
@@ -3113,6 +5094,317 @@ async function renderHistory() {
     await clearAllSnapshots();
     renderHistory();
   };
+}
+
+// ===== js/sync-sheets.js =====
+// ====================================================================
+// FARMSENSE · Google Sheets sync + chart embed
+//
+// One-time setup by the user:
+//   1. Create a Google Sheet
+//   2. Tools → Apps Script → paste the template from
+//      docs/apps-script-template.gs (also shown in the Settings tab)
+//   3. Deploy as Web App (Execute as: me, Access: anyone) → copy URL
+//   4. Insert chart in the sheet → Publish → copy the published URL
+//   5. Paste both URLs into FarmSense Settings tab
+//
+// After setup, every upload silently POSTs one row per house to the
+// Apps Script Web App, which appends the rows to the sheet. The chart
+// in the sheet (and its embed iframe inside FarmSense) update in real
+// time.
+// ====================================================================
+
+const SHEETS_LS_KEYS = {
+  webhookUrl: 'farmsense.sheetsWebhook',
+  chartUrl:   'farmsense.sheetsChart',
+  lastSyncAt: 'farmsense.sheetsLastSync',
+  lastSyncOk: 'farmsense.sheetsLastSyncOk',
+};
+
+function getSheetsConfig() {
+  try {
+    return {
+      webhookUrl: localStorage.getItem(SHEETS_LS_KEYS.webhookUrl) || '',
+      chartUrl:   localStorage.getItem(SHEETS_LS_KEYS.chartUrl)   || '',
+      lastSyncAt: localStorage.getItem(SHEETS_LS_KEYS.lastSyncAt) || '',
+      lastSyncOk: localStorage.getItem(SHEETS_LS_KEYS.lastSyncOk) === '1',
+    };
+  } catch (e) {
+    return { webhookUrl: '', chartUrl: '', lastSyncAt: '', lastSyncOk: false };
+  }
+}
+
+function saveSheetsConfig(patch) {
+  try {
+    if (patch.webhookUrl != null) localStorage.setItem(SHEETS_LS_KEYS.webhookUrl, patch.webhookUrl);
+    if (patch.chartUrl   != null) localStorage.setItem(SHEETS_LS_KEYS.chartUrl,   patch.chartUrl);
+    if (patch.lastSyncAt != null) localStorage.setItem(SHEETS_LS_KEYS.lastSyncAt, patch.lastSyncAt);
+    if (patch.lastSyncOk != null) localStorage.setItem(SHEETS_LS_KEYS.lastSyncOk, patch.lastSyncOk ? '1' : '0');
+  } catch (e) { /* ignore — sandboxed contexts */ }
+}
+
+// Build one flat row per house. The schema must match the column order
+// the Apps Script writes — keep them in sync if you change either side.
+function buildSheetsRows(farmData) {
+  const rows = [];
+  const uploadedAt = new Date().toISOString();
+  const date = farmData.date || uploadedAt.slice(0, 10);
+  for (const h of farmData.houses) {
+    const wf = waterFeedRatio(h);
+    const pctDaily = (h.death_day != null && h.qty_rem)
+      ? (h.death_day / h.qty_rem) * 100
+      : null;
+    rows.push({
+      uploadedAt,
+      farm:  farmData.name || '',
+      round: farmData.round != null ? farmData.round : '',
+      date,
+      house: h.house != null ? String(h.house) : '',
+      age:   h.age,
+      qty_in:  h.qty_in,
+      qty_rem: h.qty_rem,
+      death_day: h.death_day,
+      death_cum: h.death_cum,
+      pct_cum:   h.pct_cum,
+      pct_daily: pctDaily != null ? Number(pctDaily.toFixed(4)) : null,
+      feed_day:  h.feed_day,
+      water:     h.water,
+      wt_age:    h.wt_age,
+      water_feed_ratio: wf ? Number(wf.ratio.toFixed(2)) : null,
+      cull_morning: h.m_culled,
+      cull_evening: h.e_culled,
+      died_morning: h.m_died,
+      died_evening: h.e_died,
+    });
+  }
+  return rows;
+}
+
+// Send rows to the Apps Script Web App.
+//   - Uses `text/plain` to avoid the CORS preflight that Apps Script
+//     can't answer (the preflight returns 403 from script.google.com).
+//   - `mode: 'cors'` is fine for the simple POST itself — Apps Script
+//     returns CORS headers when deployed as "Anyone".
+//   - Returns { ok, rowCount } so the UI can show a tiny toast.
+async function syncToSheets(farmData) {
+  const { webhookUrl } = getSheetsConfig();
+  if (!webhookUrl) return { ok: false, skipped: true, reason: 'no-url' };
+  const rows = buildSheetsRows(farmData);
+  if (rows.length === 0) return { ok: false, skipped: true, reason: 'no-rows' };
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ rows }),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    saveSheetsConfig({ lastSyncAt: new Date().toISOString(), lastSyncOk: true });
+    return { ok: true, rowCount: rows.length };
+  } catch (e) {
+    saveSheetsConfig({ lastSyncAt: new Date().toISOString(), lastSyncOk: false });
+    console.warn('Sheets sync failed:', e.message);
+    return { ok: false, error: e.message, rowCount: rows.length };
+  }
+}
+
+// Sync every loaded farm at once — used by the "Sync ทั้งหมดอีกครั้ง"
+// button so the user can backfill after first configuring the webhook.
+async function syncAllFarmsToSheets() {
+  const farmKeys = Object.keys(STATE.farms);
+  let okCount = 0, failCount = 0, totalRows = 0;
+  for (const fk of farmKeys) {
+    const farm = STATE.farms[fk];
+    const result = await syncToSheets(farm);
+    if (result.ok) { okCount++; totalRows += result.rowCount; }
+    else if (!result.skipped) failCount++;
+  }
+  return { okCount, failCount, totalRows };
+}
+
+// ---------- Settings UI ----------
+
+function renderSheetsSettings() {
+  const cfg = getSheetsConfig();
+  const wh = document.getElementById('sheets-webhook-url');
+  const ch = document.getElementById('sheets-chart-url');
+  if (!wh) return;
+  wh.value = cfg.webhookUrl;
+  ch.value = cfg.chartUrl;
+  updateSheetsSyncStatus();
+}
+
+function updateSheetsSyncStatus() {
+  const status = document.getElementById('sheets-sync-status');
+  if (!status) return;
+  const cfg = getSheetsConfig();
+  if (!cfg.webhookUrl) {
+    status.innerHTML = '<span class="dot mute"></span>ยังไม่ได้ตั้งค่า Web App URL';
+    return;
+  }
+  if (!cfg.lastSyncAt) {
+    status.innerHTML = '<span class="dot mute"></span>พร้อมใช้งาน · ยังไม่ได้ sync ครั้งแรก';
+    return;
+  }
+  const when = new Date(cfg.lastSyncAt);
+  const timeStr = when.toLocaleString('th-TH', { hour: '2-digit', minute: '2-digit', day:'numeric', month:'short' });
+  if (cfg.lastSyncOk) {
+    status.innerHTML = `<span class="dot good"></span>Sync ล่าสุดสำเร็จ · ${timeStr}`;
+  } else {
+    status.innerHTML = `<span class="dot bad"></span>Sync ล่าสุดล้มเหลว · ${timeStr} — ตรวจ URL/Deploy permissions`;
+  }
+}
+
+// ---------- Chart embed ----------
+
+// Accept either:
+//   (a) a bare published URL (e.g. https://docs.google.com/spreadsheets/d/.../pubchart?oid=...&format=interactive)
+//   (b) the full <iframe> HTML snippet copied from "Publish to web"
+function normalizeChartUrl(input) {
+  if (!input) return '';
+  const m = input.match(/src="([^"]+)"/);
+  return m ? m[1] : input.trim();
+}
+
+function renderSheetsChartEmbed() {
+  const host = document.getElementById('sheets-chart-embed');
+  if (!host) return;
+  const { chartUrl } = getSheetsConfig();
+  if (!chartUrl) {
+    // No real chart configured yet — show an inline demo so the user
+    // knows what shape they'll get once Sheets is wired up. The demo is
+    // a self-contained SVG so it works offline and never makes network
+    // calls; only the COPY (label) reminds them this is a sample.
+    host.innerHTML = `
+      <div class="card chart-demo-card">
+        <h4>📈 ตัวอย่างกราฟแนวโน้ม <span class="demo-pill">DEMO</span></h4>
+        <div class="card-sub">นี่คือ <b>ตัวอย่าง</b> รูปแบบที่จะเห็นเมื่อเชื่อม Google Sheets แล้ว — ข้อมูลจะเป็นของฟาร์มจริงและอัปเดตทุกวันที่อัปโหลด</div>
+        ${buildDemoTrendChart()}
+        <div class="insight" style="margin-top:14px">
+          💡 วาง URL กราฟในกล่อง 2️⃣ ด้านบน แล้วกราฟจริงจะมาแทนที่ตรงนี้
+        </div>
+      </div>`;
+    return;
+  }
+  const src = normalizeChartUrl(chartUrl);
+  host.innerHTML = `
+    <div class="card">
+      <h4>📈 กราฟแนวโน้มจาก Google Sheets <small style="font-size:11px; color:var(--ink-mute); font-weight:400">· อัปเดต real-time</small></h4>
+      <div class="card-sub">ข้อมูลที่อัปโหลดจะถูก append เข้า Sheet อัตโนมัติ · ปรับรูปแบบกราฟใน Sheets แล้วที่นี่จะตามไปทันที</div>
+      <div class="sheets-embed-wrap">
+        <iframe class="sheets-embed" src="${escapeHtml(src)}" frameborder="0"
+          allowfullscreen
+          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+      </div>
+    </div>`;
+}
+
+// Build an inline SVG line-chart that mirrors the shape a real Sheets
+// chart would have once the operator uploads data daily over a round.
+// Pure SVG (no external libs) so it works in any context.
+function buildDemoTrendChart() {
+  // Plot geometry
+  const W = 760, H = 360;
+  const M = { l: 56, r: 24, t: 18, b: 44 };
+  const px = d => M.l + (d / 42) * (W - M.l - M.r);
+  const py = v => H - M.b - (v / 6) * (H - M.t - M.b);
+
+  // Four representative houses pulled from the four real farm files —
+  // each ends at the snapshot's actual %สูญเสียสะสม, with a smooth
+  // back-projection that matches the typical broiler-mortality curve
+  // (steep day 1-7, flat day 8-21, gentle creep day 22-finish).
+  const series = [
+    { name: 'ฟาร์มพีพีฟู้ด · เล้า 2',   color: '#1f6ec0', currentDay: 33, currentPct: 2.59 },
+    { name: 'ฟาร์มยิ่งรวย · เล้า 11',  color: '#d62828', currentDay: 38, currentPct: 5.08 },
+    { name: 'ฟาร์มขวัญใจ · เล้า 11',   color: '#2e7d4f', currentDay: 41, currentPct: 3.06 },
+    { name: 'ฟาร์มพุ่มวงศ์ · เล้า 10',  color: '#c8860b', currentDay: 34, currentPct: 3.59 },
+  ];
+
+  // Generate a curve from day 0..currentDay that ends at currentPct.
+  // Front-load 60% of the loss in days 1-7 (brooding stress), then
+  // grow gently linearly to the final figure.
+  function curve(s) {
+    const pts = [];
+    const earlyEnd = 7, earlyShare = 0.6;
+    const earlyPct = s.currentPct * earlyShare;
+    for (let d = 0; d <= s.currentDay; d++) {
+      let pct;
+      if (d <= earlyEnd) {
+        // S-curve in the first week (slow→fast→slow)
+        const t = d / earlyEnd;
+        const sCurve = t * t * (3 - 2 * t);  // smoothstep
+        pct = earlyPct * sCurve;
+      } else {
+        const t = (d - earlyEnd) / (s.currentDay - earlyEnd);
+        pct = earlyPct + (s.currentPct - earlyPct) * t;
+      }
+      pts.push([d, pct]);
+    }
+    return pts;
+  }
+
+  function pathFromPoints(pts) {
+    return pts.map((p, i) => (i === 0 ? 'M' : 'L') + px(p[0]) + ',' + py(p[1])).join(' ');
+  }
+
+  // Axes — Y gridlines + threshold band
+  const yTicks = [0, 1, 2, 3, 4, 5, 6];
+  const yGrid = yTicks.map(v => `
+    <line x1="${M.l}" x2="${W - M.r}" y1="${py(v)}" y2="${py(v)}"
+          stroke="${v === 3 ? '#d62828' : '#e4e9f0'}"
+          stroke-dasharray="${v === 3 ? '4 4' : '0'}" stroke-width="1"/>
+    <text x="${M.l - 8}" y="${py(v) + 4}" text-anchor="end"
+          font-family="JetBrains Mono, monospace" font-size="10" fill="#8a94a8">${v}%</text>`).join('');
+  const xTicks = [0, 7, 14, 21, 28, 35, 42];
+  const xGrid = xTicks.map(d => `
+    <line x1="${px(d)}" x2="${px(d)}" y1="${py(0)}" y2="${py(0)+4}" stroke="#8a94a8"/>
+    <text x="${px(d)}" y="${py(0)+18}" text-anchor="middle"
+          font-family="JetBrains Mono, monospace" font-size="10" fill="#8a94a8">${d}</text>`).join('');
+
+  // Threshold-band label
+  const thresholdLabel = `
+    <text x="${W - M.r - 4}" y="${py(3) - 6}" text-anchor="end"
+          font-family="IBM Plex Sans Thai, sans-serif" font-size="10"
+          font-weight="600" fill="#d62828">เกณฑ์ 3%</text>`;
+
+  // Series paths + end-point markers
+  const seriesSvg = series.map(s => {
+    const pts = curve(s);
+    const path = pathFromPoints(pts);
+    const last = pts[pts.length - 1];
+    return `
+      <path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.2"
+            stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
+      <circle cx="${px(last[0])}" cy="${py(last[1])}" r="4" fill="${s.color}"/>
+      <circle cx="${px(last[0])}" cy="${py(last[1])}" r="7" fill="${s.color}" opacity="0.18"/>`;
+  }).join('');
+
+  // Legend
+  const legend = series.map(s => `
+    <span class="legend-item">
+      <span class="legend-swatch" style="background:${s.color}"></span>
+      ${s.name} <small>· ปัจจุบัน ${s.currentPct.toFixed(2)}% (อายุ ${s.currentDay} วัน)</small>
+    </span>`).join('');
+
+  return `
+    <div class="chart-demo-wrap">
+      <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
+           preserveAspectRatio="xMidYMid meet" class="chart-demo-svg" role="img"
+           aria-label="ตัวอย่างกราฟ %ตายสะสมตามอายุไก่">
+        ${yGrid}
+        ${xGrid}
+        ${thresholdLabel}
+        <text x="${M.l - 36}" y="${M.t + 4}" font-family="IBM Plex Sans Thai, sans-serif"
+              font-size="11" font-weight="600" fill="#46526b" transform="rotate(-90 ${M.l - 36} ${M.t + 4})">
+          %ตายสะสม
+        </text>
+        <text x="${W/2}" y="${H - 6}" text-anchor="middle"
+              font-family="IBM Plex Sans Thai, sans-serif" font-size="11" fill="#46526b">
+          อายุไก่ (วัน)
+        </text>
+        ${seriesSvg}
+      </svg>
+      <div class="chart-demo-legend">${legend}</div>
+    </div>`;
 }
 
 // ===== js/exports.js =====
@@ -3302,6 +5594,13 @@ async function handleFiles(files) {
       saveSnapshot(farmData)
         .then(() => renderHistory())
         .catch(e => console.warn('บันทึกประวัติไม่สำเร็จ:', e.message));
+      // auto-sync to Google Sheets if configured (silent — never blocks upload)
+      if (typeof syncToSheets === 'function') {
+        syncToSheets(farmData).then(result => {
+          if (typeof updateSheetsSyncStatus === 'function') updateSheetsSyncStatus();
+          if (result.ok) console.info(`Sheets sync: +${result.rowCount} rows`);
+        });
+      }
     } catch (err) {
       item.className = 'file-item error';
       item.innerHTML = `
@@ -3340,14 +5639,6 @@ document.querySelectorAll('#feed-table thead th.sortable').forEach(th => {
 
 // ========== PRICE / ENV INPUT HANDLERS ==========
 
-['price-sale','price-chick','price-feed','price-opex'].forEach(id => {
-  document.getElementById(id).addEventListener('input', e => {
-    const key = id.replace('price-','');
-    STATE.prices[key] = parseFloat(e.target.value) || 0;
-    if (Object.keys(STATE.farms).length > 0) renderFCR(Object.keys(STATE.farms));
-  });
-});
-
 document.getElementById('age-slider').addEventListener('input', updateWindCalc);
 document.getElementById('ambient-temp').addEventListener('input', updateWindCalc);
 
@@ -3372,6 +5663,98 @@ document.getElementById('exp-feed-csv').onclick = exportFeedCSV;
 // ========== INIT ==========
 
 document.getElementById('header-date').textContent = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+// ========== SETTINGS TAB · Google Sheets sync ==========
+// Wire up Settings tab inputs + load the Apps Script template into the
+// page so the operator can copy it without leaving the app.
+(function initSheetsSettings() {
+  const wh = document.getElementById('sheets-webhook-url');
+  const ch = document.getElementById('sheets-chart-url');
+  if (!wh || !ch) return;
+
+  renderSheetsSettings();
+  renderSheetsChartEmbed();
+
+  // Load the Apps Script template file (best-effort — fall back to a
+  // copyable hint if served from file:// where fetch may not work).
+  fetch('docs/apps-script-template.gs')
+    .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)))
+    .then(code => { document.getElementById('apps-script-code').textContent = code; })
+    .catch(() => {
+      document.getElementById('apps-script-code').textContent =
+        '// ไม่สามารถโหลด apps-script-template.gs ได้ — เปิดไฟล์โดยตรงที่:\n' +
+        '// farmsense/docs/apps-script-template.gs';
+    });
+
+  // Save handler — strips whitespace, persists, and refreshes the
+  // status pill + the chart embed so the user sees the change at once.
+  document.getElementById('sheets-save-btn').onclick = () => {
+    saveSheetsConfig({
+      webhookUrl: wh.value.trim(),
+      chartUrl: ch.value.trim(),
+    });
+    updateSheetsSyncStatus();
+    renderSheetsChartEmbed();
+    flashStatus('✓ บันทึกแล้ว', 'good');
+  };
+
+  // Test connection — POSTs a heartbeat row so the user gets a real
+  // green/red light, not just a happy "saved" toast.
+  document.getElementById('sheets-test-btn').onclick = async () => {
+    const url = wh.value.trim();
+    if (!url) { flashStatus('⚠ ยังไม่ได้กรอก URL', 'warn'); return; }
+    saveSheetsConfig({ webhookUrl: url });
+    const probeFarm = {
+      name: '__test__', round: null, date: new Date().toISOString().slice(0,10),
+      houses: [{ house: 'TEST', age: 0, qty_in: 0, qty_rem: 0,
+                 death_day: 0, death_cum: 0, pct_cum: 0 }],
+    };
+    const res = await syncToSheets(probeFarm);
+    if (res.ok) flashStatus(`✓ เชื่อมต่อสำเร็จ (+${res.rowCount} แถวทดสอบ)`, 'good');
+    else        flashStatus(`✗ ล้มเหลว: ${res.error || 'unknown'}`, 'bad');
+    updateSheetsSyncStatus();
+  };
+
+  // Re-sync everything currently loaded — useful after first-time setup.
+  document.getElementById('sheets-sync-all-btn').onclick = async () => {
+    if (Object.keys(STATE.farms).length === 0) {
+      flashStatus('⚠ ยังไม่มีฟาร์มที่โหลด — อัปโหลดไฟล์ก่อน', 'warn');
+      return;
+    }
+    const r = await syncAllFarmsToSheets();
+    flashStatus(`Sync เสร็จ · ${r.okCount} ฟาร์ม · +${r.totalRows} แถว · ล้มเหลว ${r.failCount}`,
+                r.failCount === 0 ? 'good' : 'warn');
+    updateSheetsSyncStatus();
+  };
+
+  // Copy-to-clipboard for the Apps Script template.
+  document.getElementById('apps-script-copy-btn').onclick = async () => {
+    const code = document.getElementById('apps-script-code').textContent;
+    try {
+      await navigator.clipboard.writeText(code);
+      flashStatus('✓ Copy โค้ดเรียบร้อย — paste ใน Apps Script editor ได้เลย', 'good');
+    } catch (e) {
+      flashStatus('⚠ Copy ไม่สำเร็จ — เลือกข้อความใน <pre> แล้ว Ctrl+C', 'warn');
+    }
+  };
+
+  function flashStatus(msg, kind) {
+    const el = document.getElementById('sheets-sync-status');
+    if (!el) return;
+    const dot = kind === 'good' ? 'good' : kind === 'bad' ? 'bad' : 'warn';
+    el.innerHTML = `<span class="dot ${dot}"></span>${escapeHtml(msg)}`;
+    setTimeout(updateSheetsSyncStatus, 4000);
+  }
+})();
+
+// Inject the configured mortality thresholds into the Alerts-tab lede so
+// the displayed numbers always match MORTALITY_THRESHOLDS in constants.js.
+{
+  const dEl = document.getElementById('al-d-thresh');
+  const cEl = document.getElementById('al-c-thresh');
+  if (dEl) dEl.textContent = (MORTALITY_THRESHOLDS.dailyPct * 100).toFixed(2) + '%';
+  if (cEl) cEl.textContent = MORTALITY_THRESHOLDS.cumulativePct.toFixed(1) + '%';
+}
 
 // show any previously-saved history on load
 renderHistory();

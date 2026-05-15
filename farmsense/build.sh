@@ -27,12 +27,16 @@ js_files = [
     "js/state.js",
     "js/ui-helpers.js",
     "js/analyzers.js",
+    "js/analyzers-alerts.js",
     "js/schema-map.js",
     "js/history.js",
     "js/parser.js",
     "js/render.js",
     "js/render-health.js",
+    "js/render-alerts.js",
+    "js/render-analysis.js",
     "js/render-history.js",
+    "js/sync-sheets.js",
     "js/exports.js",
     "js/main.js",
 ]
@@ -41,10 +45,12 @@ js_blob = "\n".join(
     for f in js_files
 )
 
-# Inline the stylesheet link
-html = html.replace(
-    '<link rel="stylesheet" href="css/styles.css">',
-    f"<style>\n{css}\n</style>",
+# Inline the stylesheet link — accept any ?v=... cache-bust suffix.
+import re as _re
+html = _re.sub(
+    r'<link rel="stylesheet" href="css/styles\.css(?:\?[^"]*)?">',
+    lambda m: f"<style>\n{css}\n</style>",
+    html,
 )
 
 # Replace the entire app-scripts block (8 <script src=...> lines + the comment marker)
