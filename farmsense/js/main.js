@@ -182,7 +182,8 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     tab.classList.add('active');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Keep the user where they were — don't yank scroll to the top.
+    // The tab bar is already in view (they just clicked it).
   };
 });
 
