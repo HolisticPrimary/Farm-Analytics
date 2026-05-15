@@ -164,14 +164,6 @@ document.querySelectorAll('#feed-table thead th.sortable').forEach(th => {
 
 // ========== PRICE / ENV INPUT HANDLERS ==========
 
-['price-sale','price-chick','price-feed','price-opex'].forEach(id => {
-  document.getElementById(id).addEventListener('input', e => {
-    const key = id.replace('price-','');
-    STATE.prices[key] = parseFloat(e.target.value) || 0;
-    if (Object.keys(STATE.farms).length > 0) renderFCR(Object.keys(STATE.farms));
-  });
-});
-
 document.getElementById('age-slider').addEventListener('input', updateWindCalc);
 document.getElementById('ambient-temp').addEventListener('input', updateWindCalc);
 
@@ -196,6 +188,15 @@ document.getElementById('exp-feed-csv').onclick = exportFeedCSV;
 // ========== INIT ==========
 
 document.getElementById('header-date').textContent = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+
+// Inject the configured mortality thresholds into the Alerts-tab lede so
+// the displayed numbers always match MORTALITY_THRESHOLDS in constants.js.
+{
+  const dEl = document.getElementById('al-d-thresh');
+  const cEl = document.getElementById('al-c-thresh');
+  if (dEl) dEl.textContent = (MORTALITY_THRESHOLDS.dailyPct * 100).toFixed(2) + '%';
+  if (cEl) cEl.textContent = MORTALITY_THRESHOLDS.cumulativePct.toFixed(1) + '%';
+}
 
 // show any previously-saved history on load
 renderHistory();

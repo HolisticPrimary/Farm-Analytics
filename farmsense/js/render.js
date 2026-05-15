@@ -26,12 +26,13 @@ function renderDashboard() {
   });
 
   renderOverview(farmKeys);
+  renderOverviewAlertCard(farmKeys);
   renderRiskBoard(farmKeys);
   renderMortality(farmKeys);
   renderFeed(farmKeys);
-  renderFCR(farmKeys);
   renderEnv(farmKeys);
   renderHealth(farmKeys);
+  renderAlerts(farmKeys);
 }
 
 // ========== RISK BOARD · "เล้าที่ต้องดูวันนี้" ==========

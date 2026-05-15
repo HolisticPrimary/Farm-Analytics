@@ -69,9 +69,9 @@
 
     <div class="tabs" id="tabs">
       <button class="tab active" data-tab="overview">ภาพรวม <span class="count" id="cnt-overview"></span></button>
+      <button class="tab" data-tab="alerts">ภาพรวมรายวัน <span class="count" id="cnt-alerts"></span></button>
       <button class="tab" data-tab="mortality">ตาย &amp; วิธีแก้ <span class="count" id="cnt-mortality"></span></button>
       <button class="tab" data-tab="feed">อาหาร vs STD <span class="count" id="cnt-feed"></span></button>
-      <button class="tab" data-tab="fcr">FCR &amp; กำไร</button>
       <button class="tab" data-tab="env">อุณหภูมิ &amp; ลม</button>
       <button class="tab" data-tab="health">สุขภาพ &amp; เติบโต <span class="count" id="cnt-health"></span></button>
       <button class="tab" data-tab="history">ประวัติ &amp; แนวโน้ม</button>
@@ -83,6 +83,7 @@
       <h2 class="sec"><span class="num">§ 01</span> ภาพรวม</h2>
       <div class="sec-rule"></div>
       <p class="lede" id="overview-lede"></p>
+      <div id="overview-alert-card"></div>
       <div class="kpi-row" id="kpi-row"></div>
       <h2 class="sec" style="font-size:18px"><span class="num">§ 01·a</span> เล้าที่ต้องดูวันนี้</h2>
       <div class="sec-rule"></div>
@@ -153,51 +154,6 @@
           </thead>
           <tbody id="feed-tbody"></tbody>
         </table>
-      </div>
-    </div>
-
-    <!-- TAB: FCR & PROFIT -->
-    <div class="tab-content" id="tab-fcr">
-      <h2 class="sec"><span class="num">§ 04</span> FCR &amp; การคำนวณกำไร</h2>
-      <div class="sec-rule"></div>
-      <p class="lede">ปรับค่าราคา → ระบบคำนวณ break-even FCR และ profit matrix ทันที</p>
-
-      <div class="card">
-        <h4>ค่ามาตรฐานในการคำนวณ <span style="font-size:11px; color:var(--ink-mute); font-weight:400; letter-spacing:0.05em">(แก้ได้ทันที)</span></h4>
-        <div class="input-grid">
-          <div class="input-group">
-            <label>ราคาขาย Live (บาท/kg)</label>
-            <input type="number" id="price-sale" value="42" step="0.5" min="20" max="100">
-          </div>
-          <div class="input-group">
-            <label>ราคาลูกไก่ (บาท/ตัว)</label>
-            <input type="number" id="price-chick" value="18" step="0.5" min="5" max="50">
-          </div>
-          <div class="input-group">
-            <label>ราคาอาหาร PPF (บาท/kg)</label>
-            <input type="number" id="price-feed" value="19" step="0.5" min="10" max="40">
-          </div>
-          <div class="input-group">
-            <label>ค่าจัดการ (บาท/ตัว/รุ่น)</label>
-            <input type="number" id="price-opex" value="4" step="0.5" min="0" max="20">
-          </div>
-        </div>
-      </div>
-
-      <div class="kpi-row" id="fcr-kpi"></div>
-
-      <div class="card">
-        <h4>4A · ตาราง Sensitivity · กำไรต่อตัว (บาท) ตาม FCR × น้ำหนักจับ</h4>
-        <div class="card-sub">สีเขียว = กำไรดี · สีเหลือง = กำไรพอใช้ · สีแดง = ใกล้/ขาดทุน · สีแดงทึบ = ขาดทุนแน่นอน</div>
-        <div class="table-wrap">
-          <table id="sens-table"></table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h4>4B · กำไรประมาณการรายฟาร์ม</h4>
-        <div class="card-sub">สมมติ FCR &amp; น้ำหนักตามฟาร์ม · ใช้เป็น estimate</div>
-        <div id="farm-profit"></div>
       </div>
     </div>
 
@@ -338,6 +294,34 @@
       </div>
     </div>
 
+    <!-- TAB: DAILY OVERVIEW (ภาพรวมรายวัน) -->
+    <div class="tab-content" id="tab-alerts">
+      <h2 class="sec"><span class="num">§ 02</span> ภาพรวมรายวัน</h2>
+      <div class="sec-rule"></div>
+      <p class="lede">
+        เกณฑ์: ตายรายวันไม่เกิน <b id="al-d-thresh">0.10%</b> · ตายสะสมไม่เกิน <b id="al-c-thresh">3.0%</b> ·
+        ถ้าทะลุเกณฑ์ ให้เช็ค <b>แรงลม · อุณหภูมิ · ความชื้น</b> ตามอายุไก่
+      </p>
+
+      <!-- Headline status banner -->
+      <div id="daily-banner"></div>
+
+      <!-- KPI summary -->
+      <div class="kpi-row" id="alerts-kpi"></div>
+
+      <!-- Per-house cards: one card = one เล้า, everything in one place -->
+      <h3 class="sub-section">เล้าที่ต้องดูก่อน <small id="cards-priority-count"></small></h3>
+      <div class="house-cards" id="house-cards-priority"></div>
+
+      <h3 class="sub-section">เล้าที่ปกติ <small id="cards-ok-count"></small></h3>
+      <div class="house-cards" id="house-cards-ok"></div>
+
+      <!-- Age-banded disease reference (sticky-style at bottom) -->
+      <h3 class="sub-section">โรคที่ต้องเฝ้าระวังตามช่วงอายุ</h3>
+      <p class="card-sub" style="margin-top:-4px; margin-bottom:10px">ใช้เป็นรายการตรวจสอบประจำ — ไม่ใช่การวินิจฉัย</p>
+      <div id="disease-watch"></div>
+    </div>
+
     <!-- TAB: HISTORY & TREND -->
     <div class="tab-content" id="tab-history">
       <h2 class="sec"><span class="num">§ 08</span> ประวัติ &amp; แนวโน้ม</h2>
@@ -398,11 +382,13 @@
 <script src="js/state.js"></script>
 <script src="js/ui-helpers.js"></script>
 <script src="js/analyzers.js"></script>
+<script src="js/analyzers-alerts.js"></script>
 <script src="js/schema-map.js"></script>
 <script src="js/history.js"></script>
 <script src="js/parser.js"></script>
 <script src="js/render.js"></script>
 <script src="js/render-health.js"></script>
+<script src="js/render-alerts.js"></script>
 <script src="js/render-history.js"></script>
 <script src="js/exports.js"></script>
 <script src="js/main.js"></script>

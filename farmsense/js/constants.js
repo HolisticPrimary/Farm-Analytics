@@ -102,6 +102,115 @@ const LIGHT_PROGRAM = [
 // Vaccination ages (days) — sheets "อายุ 7-14 วัน" / "อายุ 15-28 วัน".
 const VACCINE_AGES = [10, 14, 18];
 
+// ====================================================================
+// MORTALITY ALERT THRESHOLDS
+// dailyPct       — daily death rate ceiling (death_day / qty_rem).
+// warnDailyPct   — yellow band: ≥ warnDailyPct AND < dailyPct.
+// cumulativePct  — cumulative death-rate ceiling (pct_cum, expressed as a
+//                  number not a fraction — pct_cum is already %, so 3 = 3%).
+// warnCumulativePct — yellow band: ≥ warn AND < red.
+// Tune in this single place; render-alerts.js + analyzers-alerts.js read it.
+// ====================================================================
+const MORTALITY_THRESHOLDS = {
+  dailyPct: 0.001,        // 0.1 %  red
+  warnDailyPct: 0.0007,   // 0.07 % yellow
+  cumulativePct: 3.0,     // 3 %    red
+  warnCumulativePct: 2.5, // 2.5 %  yellow
+};
+
+// ====================================================================
+// DISEASE WATCH · likely diseases by chicken age (static reference).
+// Used by Module 4 (Disease-by-Age) on the Alerts tab. Sources: standard
+// broiler-disease references + vet field notes; treat as guidance, not
+// diagnosis. Each entry lists ขอบเขตอายุ, โรคที่น่าจะเกิด, อาการเตือน,
+// การป้องกัน/จัดการที่ควรทำเป็นกิจวัตรในช่วงนั้น.
+// ====================================================================
+const DISEASE_BY_AGE = [
+  {
+    ageMin: 1, ageMax: 7,
+    label: '1–7 วัน · brooding',
+    diseases: [
+      { name: 'Yolk sac infection / Omphalitis', risk: 'high',
+        signs: 'ตายช่วง 1-3 วันแรก · ท้องโต · สะดือไม่ปิด · ลูกไก่ pale อ่อนเพลีย' },
+      { name: 'E.coli (early)', risk: 'med',
+        signs: 'ตายกระจุก · ขนยุ่ง · กินอาหารน้อย' },
+      { name: 'Aspergillosis (เชื้อรา)', risk: 'low',
+        signs: 'หอบ · ตาบวม · ตายขึ้นเร็ว ถ้า bedding อับชื้น' },
+    ],
+    routine: 'ตรวจอุณหภูมิแม่อุ่น · ตรวจคุณภาพลูกไก่จาก hatchery · ตรวจ navel · brooding 32-33°C',
+  },
+  {
+    ageMin: 8, ageMax: 14,
+    label: '8–14 วัน · post-brooding',
+    diseases: [
+      { name: 'Coccidiosis (early)', risk: 'high',
+        signs: 'อึเหลว/มีเลือด · ขนยุ่ง · ซึม · ตายเริ่ม Day 10-12' },
+      { name: 'CRD / Mycoplasma', risk: 'med',
+        signs: 'หายใจมีเสียง · จาม · ตาบวม · ตายแบบเรื้อรัง' },
+      { name: 'IB (Infectious Bronchitis)', risk: 'med',
+        signs: 'อาการทางเดินหายใจ · น้ำมูก · หอบ' },
+    ],
+    routine: 'ใช้ยาป้องกัน coccidia ใน feed · ตรวจ litter ไม่เปียก · เริ่มลด temp ตามอายุ',
+  },
+  {
+    ageMin: 15, ageMax: 21,
+    label: '15–21 วัน · grower start',
+    diseases: [
+      { name: 'Coccidiosis (peak)', risk: 'high',
+        signs: 'spike mortality Day 18-22 · อึเลือด · pale comb · ตายตอนเช้า' },
+      { name: 'IBD / Gumboro', risk: 'high',
+        signs: 'ตายเฉียบพลัน · feathers ยุ่ง · ปีกตก · อึขาวเหลว · ตายขึ้นเร็วใน 24-48 ชม.' },
+      { name: 'Newcastle (mild form)', risk: 'med',
+        signs: 'หายใจลำบาก · ตาแฉะ · เดินเซ' },
+    ],
+    routine: 'ทำวัคซีน Gumboro/Newcastle ตามตาราง · ติดตาม FCR · ระวังหลังให้วัคซีน mortality bump',
+  },
+  {
+    ageMin: 22, ageMax: 28,
+    label: '22–28 วัน · grower',
+    diseases: [
+      { name: 'Necrotic Enteritis', risk: 'high',
+        signs: 'ตายเฉียบพลัน · อึดำเหม็น · ลำไส้บวมเลือด (necropsy)' },
+      { name: 'Newcastle', risk: 'med',
+        signs: 'อาการประสาท · คอบิด · ตายเป็นกลุ่ม' },
+      { name: 'Ascites (น้ำในช่องท้อง)', risk: 'med',
+        signs: 'ท้องโต · นั่งหายใจหอบ · ผิวเขียวคล้ำ · เริ่มในไก่ตัวใหญ่' },
+    ],
+    routine: 'ตรวจคุณภาพอาหารโปรตีนสูง · ระบายอากาศเริ่มเข้มขึ้น · เริ่มเฝ้า panting',
+  },
+  {
+    ageMin: 29, ageMax: 35,
+    label: '29–35 วัน · finisher',
+    diseases: [
+      { name: 'Heat stress', risk: 'high',
+        signs: 'หอบกางปีก · ดื่มน้ำเยอะ · ตายตอนเที่ยง-บ่าย · ตัวใหญ่ตายก่อน' },
+      { name: 'Sudden Death Syndrome (SDS)', risk: 'high',
+        signs: 'ตายฉับพลันท่านอนหงาย · ขาแข็ง · ตัวใหญ่ที่เติบโตเร็ว' },
+      { name: 'Ascites (peak)', risk: 'med',
+        signs: 'ท้องบวม · ขาเขียว · ตายช่วงเช้ามืด/หลังให้อาหาร' },
+    ],
+    routine: 'pump cooling pad ทำงานเต็มที่ · ลดอาหารช่วงเที่ยง · เพิ่ม nipple · ตรวจ FPM ตามเกณฑ์',
+  },
+  {
+    ageMin: 36, ageMax: 99,
+    label: '36+ วัน · pre-catch',
+    diseases: [
+      { name: 'Heat stress (รุนแรง)', risk: 'high',
+        signs: 'ตายตอนบ่าย · มากในวันร้อนจัด · panting รุนแรง · กินอาหารตก' },
+      { name: 'Leg disorders / Lameness', risk: 'med',
+        signs: 'ขาเป๋ · เดินไม่ได้ · นั่งมาก · ตัวใหญ่ขาไม่รับ' },
+      { name: 'Metabolic exhaustion', risk: 'med',
+        signs: 'FCR แย่ลง · น้ำหนักเพิ่มช้า · ตายเฉียบพลันใต้ส่วนแน่น' },
+    ],
+    routine: 'พิจารณาเร่งจับถ้าน้ำหนักถึง target · ระวัง heat wave · ลดความหนาแน่นถ้าได้',
+  },
+];
+
+function diseasesByAge(age) {
+  if (age == null) return null;
+  return DISEASE_BY_AGE.find(d => age >= d.ageMin && age <= d.ageMax) || null;
+}
+
 // Mixed-sex broiler body-weight standard (kg) by day of age — from the
 // "คละเพศ" reference sheet in the farm's face-sheet file. Used as the
 // PRIMARY weight benchmark; Ross 308 BW is kept as a secondary reference.
