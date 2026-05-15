@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>คู่มือใช้งาน FarmSense</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  @page :first { margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --navy:#16284a; --navy-2:#1f3a66; --blue:#2b7fd4; --blue-bg:#eaf2fb;
+    --red:#d62828; --red-bg:#fdecec; --green:#2e7d4f; --green-bg:#e8f5ed;
+    --amber:#c8860b; --amber-bg:#fbf1da;
+    --ink:#1a2233; --ink-soft:#46526b; --ink-mute:#7a8499;
+    --border:#dde3ec; --bg:#fafbfd;
+  }
+  html, body {
+    font-family: 'IBM Plex Sans Thai', 'Thonburi', 'Sukhumvit Set', sans-serif;
+    color: var(--ink); font-size: 13.5pt; line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .display { font-family: 'Bai Jamjuree', 'Thonburi', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; }
+
+  /* ============ COVER PAGE ============ */
+  .cover {
+    page-break-after: always;
+    height: 297mm; width: 210mm;
+    background: linear-gradient(170deg, #ffffff 0%, #e9f1fb 55%, #d6e6f8 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 0 25mm; position: relative;
+  }
+  .cover::before, .cover::after {
+    content:''; position:absolute; border-radius:50%; filter:blur(40px);
+  }
+  .cover::before { width:280px; height:280px; background:#c0d6f3; opacity:.5; top:-60px; left:-60px; }
+  .cover::after  { width:240px; height:240px; background:#f3d3d3; opacity:.4; bottom:-50px; right:-40px; }
+  .cover-content { position: relative; z-index: 1; }
+  .cover-logo {
+    width: 180px; height: 180px; object-fit: contain;
+    background: #fff; border-radius: 28px; padding: 8px;
+    box-shadow: 0 18px 50px rgba(22,40,74,.18);
+    margin-bottom: 28px;
+  }
+  .cover-kicker {
+    font-family: 'Bai Jamjuree', sans-serif;
+    font-size: 11pt; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--blue); font-weight: 600; margin-bottom: 12px;
+  }
+  .cover h1 {
+    font-family: 'Bai Jamjuree', 'Thonburi', sans-serif;
+    font-size: 36pt; font-weight: 700; line-height: 1.25;
+    color: var(--navy); letter-spacing: -0.01em; margin-bottom: 16px;
+    padding-bottom: 4pt;
+  }
+  .cover .lede {
+    font-size: 14pt; color: var(--ink-soft); max-width: 130mm;
+    margin: 0 auto 36px; line-height: 1.7;
+  }
+  .cover .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10pt; color: var(--ink-mute); letter-spacing: 0.04em;
+    border-top: 2px solid var(--navy); padding-top: 18px; min-width: 200px;
+  }
+  .cover .audience {
+    display: inline-block;
+    background: rgba(255,255,255,.85); border: 1px solid var(--border);
+    border-radius: 999px; padding: 8px 22px;
+    font-family: 'Bai Jamjuree', sans-serif;
+    font-size: 11pt; font-weight: 600; color: var(--navy);
+    margin-bottom: 30px;
+  }
+
+  /* ============ BODY / SECTIONS ============ */
+  .body { font-size: 12pt; }
+  h1.chapter {
+    font-family: 'Bai Jamjuree', sans-serif;
+    font-size: 22pt; font-weight: 700; color: var(--navy);
+    margin-top: 0; margin-bottom: 14pt;
+    padding-bottom: 8pt; border-bottom: 2px solid var(--navy);
+    page-break-before: always;
+    line-height: 1.35; padding-bottom: 10pt;
+  }
+  .first-chapter { page-break-before: auto; }
+  h1.chapter .num {
+    display: inline-block; background: var(--blue); color: #fff;
+    border-radius: 6px; padding: 3px 11px; margin-right: 10px;
+    font-size: 12pt; font-weight: 700; vertical-align: middle;
+    letter-spacing: 0.02em;
+  }
+  h2 {
+    font-family: 'Bai Jamjuree', sans-serif;
+    font-size: 15pt; font-weight: 600; color: var(--navy);
+    margin: 18pt 0 8pt; line-height: 1.4;
+  }
+  h3 {
+    font-family: 'Bai Jamjuree', sans-serif;
+    font-size: 12.5pt; font-weight: 600; color: var(--navy-2);
+    margin: 12pt 0 4pt;
+  }
+  p { margin-bottom: 8pt; }
+  b, strong { color: var(--navy); font-weight: 600; }
+  ul, ol { margin: 6pt 0 10pt 20pt; }
+  li { margin-bottom: 4pt; }
+
+  /* TOC */
+  .toc { page-break-after: always; padding-top: 8pt; }
+  .toc h1 {
+    font-family: 'Bai Jamjuree', sans-serif;
+    font-size: 22pt; color: var(--navy); margin-bottom: 18pt;
+    border-bottom: 2px solid var(--navy); padding-bottom: 8pt;
+  }
+  .toc ol { list-style: none; margin: 0; padding: 0; }
+  .toc li {
+    display: flex; align-items: baseline; padding: 8pt 0;
+    border-bottom: 1px dotted var(--border); font-size: 11.5pt;
+  }
+  .toc li .n {
+    color: var(--blue); font-weight: 700; min-width: 28pt;
+    font-family: 'Bai Jamjuree', sans-serif;
+  }
+  .toc li .t { flex: 1; }
+  .toc li .p { color: var(--ink-mute); font-family: 'JetBrains Mono', monospace; font-size: 10pt; }
+
+  /* Callouts */
+  .callout {
+    border-radius: 8px; padding: 12pt 16pt; margin: 10pt 0;
+    border-left: 4px solid var(--blue); background: var(--blue-bg);
+    page-break-inside: avoid;
+  }
+  .callout.example { border-left-color: var(--blue); background: var(--blue-bg); }
+  .callout.warning { border-left-color: var(--red); background: var(--red-bg); }
+  .callout.action  { border-left-color: var(--green); background: var(--green-bg); }
+  .callout.note    { border-left-color: var(--amber); background: var(--amber-bg); }
+  .callout .tag {
+    display: inline-block; font-family: 'Bai Jamjuree', sans-serif;
+    font-weight: 700; font-size: 10pt; letter-spacing: 0.05em;
+    text-transform: uppercase; margin-bottom: 6pt;
+  }
+  .callout.example .tag { color: var(--blue); }
+  .callout.warning .tag { color: var(--red); }
+  .callout.action  .tag { color: var(--green); }
+  .callout.note    .tag { color: var(--amber); }
+  .callout p:last-child { margin-bottom: 0; }
+
+  /* Formula box */
+  .formula {
+    background: #f3f6fb; border: 1px solid var(--border);
+    border-radius: 8px; padding: 14pt 18pt; margin: 10pt 0;
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5pt;
+    line-height: 1.6; color: var(--navy); white-space: pre-wrap;
+    page-break-inside: avoid;
+  }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 10pt 0; font-size: 11pt; page-break-inside: avoid; }
+  th, td { border: 1px solid var(--border); padding: 7pt 10pt; text-align: left; vertical-align: top; }
+  th { background: #f0f4fa; font-family: 'Bai Jamjuree', sans-serif; color: var(--navy); font-weight: 600; font-size: 10.5pt; }
+  tr.good td  { background: #ecfaf1; }
+  tr.warn td  { background: #fdf6e3; }
+  tr.bad td   { background: #fde6e6; }
+  td .pill {
+    display: inline-block; padding: 2pt 9pt; border-radius: 999px;
+    font-size: 9.5pt; font-weight: 600;
+  }
+  .pill.green { background: var(--green); color: #fff; }
+  .pill.amber { background: var(--amber); color: #fff; }
+  .pill.red   { background: var(--red); color: #fff; }
+  .pill.blue  { background: var(--blue); color: #fff; }
+
+  /* Section intros */
+  .intro {
+    background: linear-gradient(135deg, var(--blue-bg) 0%, #f5f9fd 100%);
+    border-radius: 10px; padding: 14pt 18pt; margin: 8pt 0 18pt;
+    border-left: 5px solid var(--blue);
+    page-break-inside: avoid;
+  }
+  .intro b { color: var(--navy); }
+
+  /* Eyebrow / small label */
+  .eyebrow {
+    font-family: 'Bai Jamjuree', sans-serif;
+    font-size: 10pt; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--blue); font-weight: 700;
+    margin-bottom: 4pt;
+  }
+
+  /* Footer reference */
+  .footer-ref {
+    margin-top: 36pt; padding-top: 12pt;
+    border-top: 1px dashed var(--border);
+    font-size: 10pt; color: var(--ink-mute); text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Two-column comparison */
+  .compare {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12pt;
+    margin: 10pt 0; page-break-inside: avoid;
+  }
+  .compare .box {
+    border-radius: 8px; padding: 12pt 14pt; border: 1px solid var(--border);
+  }
+  .compare .box.good { background: var(--green-bg); border-color: #b8dec7; }
+  .compare .box.bad  { background: var(--red-bg); border-color: #f0c8c8; }
+  .compare h4 {
+    font-family: 'Bai Jamjuree', sans-serif; font-size: 11.5pt;
+    font-weight: 700; margin-bottom: 4pt;
+  }
+  .compare .good h4 { color: var(--green); }
+  .compare .bad h4 { color: var(--red); }
+
+  .avoid-break { page-break-inside: avoid; }
+</style>
+</head>
+<body>
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div class="cover-content">
+    <img class="cover-logo" src="farmsense/assets/logo.png" alt="Smart Chicken Farm">
+    <div class="cover-kicker">SMART CHICKEN FARM</div>
+    <h1>คู่มือใช้งาน FarmSense</h1>
+    <div class="lede">
+      เรียนรู้การอ่านตัวเลขฟาร์มไก่จากระบบ FarmSense<br>
+      เข้าใจง่าย พร้อมตัวอย่างจริงและคำแนะนำว่าควรทำอย่างไรเมื่อเห็นค่าเหล่านี้
+    </div>
+    <div class="audience">📖 สำหรับสัตวบาล &amp; ผู้จัดการฟาร์ม</div>
+    <div class="meta">
+      เวอร์ชัน 1.0<br>
+      holisticprimary.github.io/Farm-Analytics
+    </div>
+  </div>
+</section>
+
+<!-- ============ TOC ============ -->
+<section class="toc">
+  <h1>สารบัญ</h1>
+  <ol>
+    <li><span class="n">1</span><span class="t">รู้จัก FarmSense — มันช่วยอะไร</span><span class="p">หน้า 3</span></li>
+    <li><span class="n">2</span><span class="t">เริ่มต้น — อัปโหลดและเปิดดูข้อมูล</span><span class="p">หน้า 4</span></li>
+    <li><span class="n">3</span><span class="t">ภาพรวม &amp; "เล้าที่ต้องดูวันนี้"</span><span class="p">หน้า 5</span></li>
+    <li><span class="n">4</span><span class="t">%ตายสะสม — ตัวเลขที่สำคัญที่สุด</span><span class="p">หน้า 7</span></li>
+    <li><span class="n">5</span><span class="t">"ตายจริง" vs "คัด" — ทำไมต้องแยก</span><span class="p">หน้า 9</span></li>
+    <li><span class="n">6</span><span class="t">รูปแบบ เช้า/เย็น — บอกอะไร</span><span class="p">หน้า 10</span></li>
+    <li><span class="n">7</span><span class="t">อาหาร — ไก่กินตามเกณฑ์หรือไม่</span><span class="p">หน้า 11</span></li>
+    <li><span class="n">8</span><span class="t">น้ำ:อาหาร — สัญญาณเตือนเบอร์ 1</span><span class="p">หน้า 13</span></li>
+    <li><span class="n">9</span><span class="t">น้ำหนักไก่ vs Ross 308</span><span class="p">หน้า 14</span></li>
+    <li><span class="n">10</span><span class="t">อาหารหก / สูญเปล่า</span><span class="p">หน้า 15</span></li>
+    <li><span class="n">11</span><span class="t">FCR &amp; กำไรต่อตัว</span><span class="p">หน้า 16</span></li>
+    <li><span class="n">12</span><span class="t">อุณหภูมิ &amp; แรงลม</span><span class="p">หน้า 18</span></li>
+    <li><span class="n">13</span><span class="t">ประวัติ &amp; แนวโน้มข้ามรอบ</span><span class="p">หน้า 19</span></li>
+    <li><span class="n">14</span><span class="t">คำถามที่พบบ่อย (FAQ)</span><span class="p">หน้า 20</span></li>
+  </ol>
+</section>
+
+<div class="body">
+
+<!-- ============ CH 1 ============ -->
+<h1 class="chapter first-chapter"><span class="num">1</span>รู้จัก FarmSense — มันช่วยอะไร</h1>
+
+<p>
+  <b>FarmSense</b> คือเครื่องมือวิเคราะห์ฟาร์มไก่เนื้อแบบครบวงจร เปิดในเบราว์เซอร์
+  (Chrome / Safari / Firefox / Edge) แล้วอัปโหลดไฟล์ "ใบหน้าเล้า" Excel ที่ใช้กันในฟาร์ม —
+  ระบบจะ<b>คำนวณและสรุปข้อมูลให้ทันที</b> โดยทำงาน 100% บนเครื่องของคุณ
+  <b>ข้อมูลไม่ออกจากเครื่องไปไหน</b>
+</p>
+
+<div class="callout note">
+  <span class="tag">หัวใจ</span>
+  <p>FarmSense ไม่ได้สร้างตัวเลขใหม่ — มันเอาข้อมูลที่ฟาร์มกรอกในใบหน้าเล้าอยู่แล้ว
+  มา<b>คำนวณ-เปรียบเทียบ-จัดอันดับ</b> ให้เห็นภาพรวมในแว็บเดียว แทนที่จะต้องเปิดดูทีละเล้า</p>
+</div>
+
+<h2>ระบบช่วยตอบคำถามอะไรบ้าง</h2>
+
+<table>
+  <thead><tr><th>คำถามที่ฟาร์มเจอบ่อย</th><th>FarmSense ตอบยังไง</th></tr></thead>
+  <tbody>
+    <tr><td>วันนี้ <b>เล้าไหนต้องเข้าไปดูก่อน?</b></td><td>"เล้าที่ต้องดูวันนี้" — จัดอันดับเล้าตามคะแนนเสี่ยงรวม</td></tr>
+    <tr><td>ไก่<b>กินอาหารน้อยลง</b>เพราะอะไร?</td><td>เทียบกินจริงกับเกณฑ์ฟาร์ม + เช็คอัตราน้ำ:อาหาร</td></tr>
+    <tr><td><b>ตายเยอะตอนเย็น</b> — heat stress?</td><td>แยกตายเช้า/เย็น + จับรูปแบบให้อัตโนมัติ</td></tr>
+    <tr><td>รุ่นนี้<b>กำไรเท่าไหร่</b>?</td><td>คำนวณ break-even FCR + กำไรต่อตัว + กำไรรวม</td></tr>
+    <tr><td>รุ่นนี้<b>ดีขึ้นกว่ารุ่นก่อน</b>ไหม?</td><td>เก็บประวัติ + เทียบ %ตาย / ความเร็วการตายข้ามรอบ</td></tr>
+  </tbody>
+</table>
+
+<h2>หน้าจอหลัก — 8 แท็บ</h2>
+<ol>
+  <li><b>ภาพรวม</b> — สรุปทั้งหมด + "เล้าที่ต้องดูวันนี้"</li>
+  <li><b>ตาย &amp; วิธีแก้</b> — วินิจฉัยทีละเล้า + แนะนำการแก้ไข</li>
+  <li><b>อาหาร vs เกณฑ์ฟาร์ม</b> — เทียบการกินจริงกับเกณฑ์</li>
+  <li><b>FCR &amp; กำไร</b> — คำนวณกำไร + sensitivity matrix</li>
+  <li><b>อุณหภูมิ &amp; ลม</b> — เกณฑ์รายวัน + wind chill</li>
+  <li><b>สุขภาพ &amp; เติบโต</b> — น้ำ:อาหาร, ตาย/คัด, น้ำหนัก, อาหารหก</li>
+  <li><b>ประวัติ &amp; แนวโน้ม</b> — เก็บ snapshot เทียบรอบต่อรอบ</li>
+  <li><b>Export</b> — ดาวน์โหลด JSON / CSV / พิมพ์ PDF</li>
+</ol>
+
+<!-- ============ CH 2 ============ -->
+<h1 class="chapter"><span class="num">2</span>เริ่มต้น — อัปโหลดและเปิดดูข้อมูล</h1>
+
+<h2>1. เปิดเว็บไซต์</h2>
+<p>เปิดเบราว์เซอร์ใดก็ได้ ไปที่:</p>
+<div class="formula">https://holisticprimary.github.io/Farm-Analytics/</div>
+
+<p>หรือดับเบิลคลิกไฟล์ <span class="mono">farmsense.html</span> ที่เก็บไว้ในเครื่อง — ใช้งานได้แม้ไม่มีอินเทอร์เน็ต</p>
+
+<h2>2. อัปโหลดไฟล์ใบหน้าเล้า</h2>
+<p>ลากไฟล์ Excel (.xlsx / .xls) มาวางในกล่องด้านบน <b>หรือ</b> คลิกเพื่อเลือกไฟล์ —
+  ใช้ได้พร้อมกันหลายฟาร์ม</p>
+
+<div class="callout note">
+  <span class="tag">ข้อกำหนด</span>
+  <p>ไฟล์ต้องมีชีทชื่อ <b>"ประมาณการไก่คงเหลือจับ"</b> (หรือคำที่ใกล้เคียง) ระบบจะหาเอง
+  หลังอัปโหลด — ถ้าระบบบอกว่าหาคอลัมน์บางตัวไม่เจอ ใช้ปุ่ม <b>"⚙ ปรับการ map คอลัมน์"</b>
+  เลือกเองว่าคอลัมน์ไหนคืออะไร ระบบจะ<b>จดจำ template นั้นไว้</b> — ครั้งหน้าไม่ต้องปรับซ้ำ</p>
+</div>
+
+<h2>3. คลิกแท็บที่ต้องการดู</h2>
+<p>แท็บอยู่ด้านบนของหน้าจอ คลิกเพื่อสลับมุมมอง การคำนวณทุกอย่างเสร็จในเสี้ยววินาที</p>
+
+<div class="callout action">
+  <span class="tag">ความปลอดภัย</span>
+  <p><b>ไม่มีการส่งข้อมูลออกที่ไหน</b> ทุกการคำนวณเกิดบนเบราว์เซอร์ของคุณเท่านั้น
+  ไม่มี server, ไม่มี analytics, ไม่ต้องล็อกอิน — ปิดเบราว์เซอร์ปุ๊ป ข้อมูลก็หายปั๊ป
+  (ยกเว้นถ้าใช้ฟีเจอร์ "ประวัติ" จะเก็บไว้ในเบราว์เซอร์เครื่องคุณเอง)</p>
+</div>
+
+<!-- ============ CH 3 ============ -->
+<h1 class="chapter"><span class="num">3</span>ภาพรวม &amp; "เล้าที่ต้องดูวันนี้"</h1>
+
+<div class="intro">
+  <div class="eyebrow">แท็บภาพรวม · §01</div>
+  <p>นี่คือ <b>หน้าแรกที่ต้องดูทุกเช้า</b> — มี 3 ส่วน: KPI รวม, เล้าที่ต้องดูวันนี้, เปรียบเทียบฟาร์ม + Heatmap</p>
+</div>
+
+<h2>KPI รวม (การ์ดด้านบน)</h2>
+<table>
+  <thead><tr><th>การ์ด</th><th>หมายความว่า</th></tr></thead>
+  <tbody>
+    <tr><td><b>ไก่คงเหลือรวม</b></td><td>ไก่ที่ยังมีชีวิตทั้งหมด ทุกฟาร์มทุกเล้ารวมกัน</td></tr>
+    <tr><td><b>ตายสะสมรวม</b></td><td>ตายไปแล้วทั้งหมด พร้อม %ตายเฉลี่ย (เกณฑ์ดี &lt; 2%)</td></tr>
+    <tr><td><b>ตายวันนี้</b></td><td>ตายในรอบวันล่าสุด + อัตราต่อวัน (เกณฑ์ดี &lt; 0.06%)</td></tr>
+    <tr><td><b>เล้าวิกฤต</b></td><td>นับเล้าที่ %ตายสะสม ≥ 4% (ต้องแก้ด่วน)</td></tr>
+  </tbody>
+</table>
+
+<h2>"เล้าที่ต้องดูวันนี้" — หัวใจของระบบ</h2>
+<p>นี่คือสิ่งที่ FarmSense <b>ทำได้แตกต่าง</b>จากการเปิดดูตารางทีละเล้า — ระบบจะ
+  <b>คำนวณคะแนนความเสี่ยงรวม</b>ของแต่ละเล้าโดยเอาทุกสัญญาณมารวมกัน
+  (%ตาย + อาหาร + น้ำ:อาหาร + รูปแบบตาย + น้ำหนัก + density + เทียบเล้าพี่น้อง + วัคซีน)
+  แล้วจัดอันดับให้เลย — <b>"คะแนนสูง = ต้องดูก่อน"</b></p>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่างจริง</span>
+  <p>จากไฟล์ <b>ฟาร์มพีพีฟู้ดชัยนาท รุ่น 14</b>:</p>
+  <p>
+    🔴 <b>วิกฤต — เล้า 4</b>: คะแนน 56 · เหตุผล: ตายสะสม 4.27%, ตายวันนี้ 170 ตัว (สงสัย incident),
+    น้ำ:อาหาร 2.82 สูง (heat stress), น้ำหนักต่ำกว่าเกณฑ์ -5.1%, กินอาหารน้อย -10%
+  </p>
+  <p>
+    🟢 <b>ปกติ — เล้า 6</b>: คะแนน 0 · ตายสะสม 1.59%, ทุกตัวชี้วัดอยู่ในเกณฑ์
+  </p>
+  <p style="margin-top:8pt;color:var(--ink-soft)">
+    คน 1 คนดูฟาร์ม 4 ฟาร์ม 37 เล้า — ใช้ตารางนี้ <b>30 วินาที</b>รู้เลยว่าวันนี้ต้องลงไปเล้าไหนก่อน
+  </p>
+</div>
+
+<h2>ระดับความเสี่ยง</h2>
+<table>
+  <thead><tr><th>คะแนน</th><th>ระดับ</th><th>ความหมาย</th></tr></thead>
+  <tbody>
+    <tr class="bad"><td>≥ 50</td><td><span class="pill red">วิกฤต</span></td><td>ลงพื้นที่เดี๋ยวนี้ + โทรหาสัตวแพทย์ถ้าจำเป็น</td></tr>
+    <tr class="warn"><td>25–49</td><td><span class="pill amber">เสี่ยงสูง</span></td><td>ลงพื้นที่วันนี้ ตรวจหาสาเหตุ</td></tr>
+    <tr class="good"><td>10–24</td><td><span class="pill green">เฝ้าระวัง</span></td><td>เพิ่มความถี่การตรวจ ดูแนวโน้ม</td></tr>
+    <tr><td>&lt; 10</td><td>—</td><td>ปกติ ไม่แสดงในตาราง</td></tr>
+  </tbody>
+</table>
+
+<div class="callout note">
+  <span class="tag">โปร่งใส</span>
+  <p>ทุกแถวในตาราง <b>โชว์เหตุผลที่ประกอบคะแนน</b>เสมอ ไม่ใช่เลขลอยๆ — คุณเห็นว่าทำไมเล้านี้ถึงได้
+  คะแนนเท่านี้ และตัดสินใจเองได้ว่าเหตุผลไหนน่าเชื่อ</p>
+</div>
+
+<h2>Heatmap ทุกเล้า</h2>
+<p>ด้านล่างของแท็บภาพรวม จะมี Heatmap แสดง %ตายสะสมของทุกเล้าทุกฟาร์ม
+  เลือกสีตามความรุนแรง — <b>ไล่จากเขียว (ดี) → เหลือง → ส้ม → แดง (วิกฤต)</b>
+  ใช้สแกนรวดเดียวหาเล้าที่สีแดงแสบตา</p>
+
+<!-- ============ CH 4 ============ -->
+<h1 class="chapter"><span class="num">4</span>%ตายสะสม — ตัวเลขที่สำคัญที่สุด</h1>
+
+<div class="intro">
+  <p><b>%ตายสะสม</b> = เปอร์เซ็นต์ของไก่ที่ตายไปแล้วจากทั้งหมดที่ลง</p>
+  <p>เป็นตัวชี้วัด <b>สำคัญที่สุด</b>ในการประเมินสุขภาพรอบนี้ — ฟาร์มดีต้องคุมให้ &lt; 2%
+  ตลอดรอบ 35–42 วัน</p>
+</div>
+
+<h2>คำนวณยังไง</h2>
+<div class="formula">%ตายสะสม = ตายสะสม ÷ ยอดไก่ลง × 100</div>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่างจริง · ฟาร์มพีพีฟู้ดชัยนาท เล้า 1</span>
+  <p>
+    • ยอดไก่ลง = 40,290 ตัว<br>
+    • ตายสะสม = 1,002 ตัว<br>
+    • <b>%ตายสะสม = 1,002 ÷ 40,290 × 100 = 2.49%</b>
+  </p>
+  <p style="margin-top:6pt; color:var(--ink-soft)">
+    หมายเหตุ: FarmSense <b>อ่านค่านี้ตรงจากคอลัมน์ "%ตายสะสม" ในไฟล์ Excel</b> ที่ฟาร์มกรอก —
+    ไม่ได้คำนวณซ้ำ แต่มีการตรวจสอบความสอดคล้องโดยเทียบกับสูตรข้างบน
+  </p>
+</div>
+
+<h2>เกณฑ์ตัดสิน — ทำไมต้อง 2%</h2>
+<table>
+  <thead><tr><th>%ตายสะสม</th><th>สี</th><th>สถานะ</th><th>การตีความ</th></tr></thead>
+  <tbody>
+    <tr class="good"><td>&lt; 1.5%</td><td><span class="pill green">ดีมาก</span></td><td>ดี</td><td>ฟาร์มจัดการได้ดี (top tier)</td></tr>
+    <tr class="good"><td>1.5–2.5%</td><td><span class="pill" style="background:#cae478">เริ่มสูง</span></td><td>เริ่มสูงเล็กน้อย</td><td>ปกติของช่วงปลายรอบ จับตาดู</td></tr>
+    <tr class="warn"><td>2.5–3.3%</td><td><span class="pill amber">เฝ้าระวัง</span></td><td>เฝ้าระวัง</td><td>หาสาเหตุ — สาย? supplier? heat stress?</td></tr>
+    <tr class="warn"><td>3.3–4%</td><td><span class="pill" style="background:#e8854b">สูง</span></td><td>สูง</td><td>แก้ไขด่วน เพิ่มความถี่ตรวจ</td></tr>
+    <tr class="bad"><td>≥ 4%</td><td><span class="pill red">วิกฤต</span></td><td>วิกฤต</td><td>โทร vet, necropsy, ตรวจซัพพลายเออร์</td></tr>
+  </tbody>
+</table>
+
+<div class="callout note">
+  <span class="tag">มาตรฐาน</span>
+  <p>มาตรฐานสายพันธุ์ Ross 308 (ที่ฟาร์มไทยส่วนใหญ่เลี้ยง) คือ <b>~3.5% ตลอดรอบ 35 วัน</b>
+  ฟาร์มที่บริหารดีจะอยู่ <b>1.5–2.5%</b> ในช่วงปลายรอบ (เกินจากนี้ก็จะเริ่มน่าห่วง)</p>
+</div>
+
+<h2>หา %ตายสะสมได้ที่ไหนในเว็บ</h2>
+<ul>
+  <li><b>แท็บภาพรวม</b> — KPI การ์ดที่ 2 "ตายสะสมรวม" (ค่าเฉลี่ยของทุกฟาร์ม)</li>
+  <li><b>แท็บภาพรวม → การ์ดฟาร์ม</b> — %ตายสะสมของแต่ละฟาร์ม</li>
+  <li><b>แท็บภาพรวม → Heatmap</b> — แต่ละเล้ามี %ตายของตัวเองพร้อมสี</li>
+  <li><b>แท็บ "ตาย &amp; วิธีแก้"</b> — ตารางครบทุกเล้า เรียงตาม %ตาย</li>
+</ul>
+
+<!-- ============ CH 5 ============ -->
+<h1 class="chapter"><span class="num">5</span>"ตายจริง" vs "คัด" — ทำไมต้องแยก</h1>
+
+<div class="intro">
+  <p>ไฟล์ใบหน้าเล้าแยกข้อมูลเป็น <b>4 ช่อง</b> — ไก่ตายเช้า / ไก่คัดเช้า / ไก่ตายเย็น / ไก่คัดเย็น
+  ส่วนใหญ่ฟาร์มดูแต่ "รวม" — FarmSense แยกให้เห็นชัด เพราะ<b>ความหมายต่างกันมาก</b></p>
+</div>
+
+<div class="compare">
+  <div class="box good">
+    <h4>✓ ไก่คัด</h4>
+    <p>การ <b>จัดการเชิงรุก</b> — สัตวบาลตัดสินใจคัดไก่ที่อ่อนแอ/พิการออก เพื่อรักษาภาพรวมของเล้า</p>
+    <p style="margin-top:6pt"><b>คัดเยอะ = บริหารดี</b> — แสดงว่าทีมตื่นตัว</p>
+  </div>
+  <div class="box bad">
+    <h4>✗ ไก่ตาย</h4>
+    <p>ความ<b>สูญเสียที่ควบคุมไม่ได้</b> — ตายเองจากโรค ความร้อน อุบัติเหตุ ฯลฯ</p>
+    <p style="margin-top:6pt"><b>ตายเยอะ = มีปัญหา</b> — ต้องหาสาเหตุ</p>
+  </div>
+</div>
+
+<h2>สูตร</h2>
+<div class="formula">ตายจริง  = ไก่ตายเช้า + ไก่ตายเย็น
+คัด     = ไก่คัดเช้า + ไก่คัดเย็น
+รวม     = ตายจริง + คัด
+%คัด    = คัด ÷ รวม × 100</div>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่าง · ฟาร์ม 10 เล้า · เล้า 1</span>
+  <table style="margin:6pt 0">
+    <thead><tr><th></th><th>เช้า</th><th>เย็น</th><th>รวม</th></tr></thead>
+    <tbody>
+      <tr><td>ตายจริง</td><td>16</td><td>13</td><td><b>29</b></td></tr>
+      <tr><td>คัด</td><td>6</td><td>10</td><td><b>16</b></td></tr>
+      <tr><th>รวม</th><td>22</td><td>23</td><td><b>45</b></td></tr>
+    </tbody>
+  </table>
+  <p>%คัด = 16/45 = <b>36%</b> — แสดงว่าทีมคัดอย่างจริงจัง (ดี)</p>
+  <p>ตรวจสอบ: 29 + 16 = 45 ตรงกับ "ตายต่อวัน" ในไฟล์ ✓ <i>(ระบบเช็คทุกเล้า)</i></p>
+</div>
+
+<div class="callout action">
+  <span class="tag">วิธีอ่าน</span>
+  <p>
+    • <b>%คัดสูง (40%+)</b> + <b>%ตายรวมต่ำ</b> = ฟาร์มดี บริหารดี<br>
+    • <b>%คัดต่ำ (≤10%)</b> + <b>%ตายรวมสูง</b> = ทีมไม่ได้คัด ปล่อยให้ตายเอง — ต้องสอน<br>
+    • ทั้ง 2 ตัวสูงพร้อมกัน = วิกฤต — ทีมพยายามแล้วแต่ปัญหาใหญ่กว่า
+  </p>
+</div>
+
+<!-- ============ CH 6 ============ -->
+<h1 class="chapter"><span class="num">6</span>รูปแบบ เช้า/เย็น — บอกอะไร</h1>
+
+<div class="intro">
+  <p>การที่ไก่ตาย<b>กระจุกเวลาเดียวกัน</b> มีความหมายเฉพาะ — FarmSense จับรูปแบบให้อัตโนมัติ</p>
+</div>
+
+<table>
+  <thead><tr><th>รูปแบบ</th><th>สังเกตได้จาก</th><th>สาเหตุที่น่าจะเป็น</th></tr></thead>
+  <tbody>
+    <tr class="bad"><td><span class="pill red">เย็นหนัก (HEAT)</span></td><td>ตายเย็น &gt; เช้า × 1.5 เท่า</td><td><b>Heat stress</b> ช่วงบ่าย-เย็นอากาศร้อนสะสม ระบบระบายไม่พอ</td></tr>
+    <tr class="warn"><td><span class="pill amber">เช้าหนัก (NIGHT)</span></td><td>ตายเช้า &gt; เย็น × 1.5 เท่า</td><td><b>หนาว/ปัญหากลางคืน</b> ระบบทำความอุ่นล้มเหลว หรือไฟตกกลางดึก</td></tr>
+    <tr class="good"><td><span class="pill green">สม่ำเสมอ (EVEN)</span></td><td>ใกล้เคียงกัน</td><td>ตายแบบ random — ไม่มีสาเหตุเฉพาะเวลา</td></tr>
+  </tbody>
+</table>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่างจริง</span>
+  <p><b>เล้า 1</b> (ตายเช้า 22, เย็น 23) → EVEN → ปกติ</p>
+  <p><b>เล้า 2</b> (ตายเช้า 34, เย็น 3) → NIGHT → หนาว/กลางคืนผิดปกติ ต้องตรวจฮีตเตอร์</p>
+  <p><b>เล้า 4</b> (ตายเช้า 23, เย็น 40 รวมคัด) → HEAT → ช่วงบ่ายร้อน ต้องเร่งพัดลม</p>
+</div>
+
+<div class="callout action">
+  <span class="tag">เห็น HEAT — ทำยังไง</span>
+  <p>
+    1. ดูอุณหภูมิเล้าตอนบ่าย เทียบกับเกณฑ์ที่อายุนั้น<br>
+    2. เปิดแท็บ "อุณหภูมิ &amp; ลม" ดูแรงลม FPM ที่ต้องใช้<br>
+    3. เพิ่มจำนวนพัดลม / เปิดปั๊มแพดเร็วขึ้น<br>
+    4. ถ้าอากาศเย็นแล้วยัง HEAT — เช็คแสงไฟ density การกระจายตัวของไก่
+  </p>
+</div>
+
+<!-- ============ CH 7 ============ -->
+<h1 class="chapter"><span class="num">7</span>อาหาร — ไก่กินตามเกณฑ์หรือไม่</h1>
+
+<div class="intro">
+  <div class="eyebrow">แท็บ "อาหาร vs เกณฑ์ฟาร์ม" · §03</div>
+  <p>เทียบ <b>กรัม/ตัว/วัน ที่ไก่กินจริง</b> กับ <b>เกณฑ์อาหารของฟาร์ม</b>
+  (จากไฟล์เกณฑ์ที่ฟาร์มกำหนดเอง) — ระบบยังโชว์เทียบกับมาตรฐาน Ross 308 เป็นตัวเทียบรองด้วย</p>
+</div>
+
+<h2>คำนวณยังไง</h2>
+<div class="formula">กรัม/ตัว/วัน  = อาหาร (kg) × 1000 ÷ ยอดไก่คงเหลือ
+ส่วนต่าง (%) = (กินจริง − เกณฑ์ฟาร์ม) ÷ เกณฑ์ฟาร์ม × 100</div>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่าง · ฟาร์ม 10 เล้า · เล้า 1</span>
+  <p>
+    • อาหารวันนี้ = 6,600 kg<br>
+    • ไก่คงเหลือ = 35,392 ตัว<br>
+    • <b>กรัม/ตัว/วัน = 6,600 × 1,000 ÷ 35,392 = 186.5 ก./ตัว/วัน</b>
+  </p>
+  <p>
+    • เกณฑ์ฟาร์มที่อายุ 36 วัน = 175 g<br>
+    • ส่วนต่าง = (186.5 − 175) ÷ 175 × 100 = <b>+6.6%</b>
+  </p>
+  <p style="margin-top:6pt">→ สถานะ: <span class="pill" style="background:#6b4ea8;color:#fff">OVERFEED</span>
+  (เกินเกณฑ์ +5%) → ตรวจการสิ้นเปลือง</p>
+</div>
+
+<h2>เกณฑ์สถานะ</h2>
+<table>
+  <thead><tr><th>ส่วนต่าง %</th><th>สถานะ</th><th>หมายความว่า</th><th>ทำยังไง</th></tr></thead>
+  <tbody>
+    <tr><td>&gt; +5%</td><td><span class="pill" style="background:#6b4ea8;color:#fff">OVERFEED</span></td><td>กินเกินเกณฑ์</td><td>เช็คสิ้นเปลือง / recheck สูตร / อาหารหก</td></tr>
+    <tr class="good"><td>−5 ถึง +5%</td><td><span class="pill green">OK</span></td><td>ปกติ กินตามเกณฑ์</td><td>ดำเนินการต่อ</td></tr>
+    <tr class="warn"><td>−5 ถึง −10%</td><td><span class="pill amber">LIGHT</span></td><td>น้อยเล็กน้อย</td><td>ตรวจน้ำหนัก ติดตามรายสัปดาห์</td></tr>
+    <tr class="warn"><td>−10 ถึง −20%</td><td><span class="pill" style="background:#c87f60;color:#fff">LOW</span></td><td>กินน้อย</td><td>พิจารณาเพิ่ม 10–15% หาก น.น.ต่ำกว่าเกณฑ์</td></tr>
+    <tr class="bad"><td>&lt; −20%</td><td><span class="pill red">CRITICAL</span></td><td>กินน้อยมาก — เสี่ยงป่วย</td><td>โทร vet, เช็คน้ำ/แสง/อุณหภูมิ, observe</td></tr>
+  </tbody>
+</table>
+
+<div class="callout note">
+  <span class="tag">ทำไมเทียบกับเกณฑ์ฟาร์ม ไม่ใช่ Ross 308</span>
+  <p>ฟาร์มไทยส่วนใหญ่ใช้ <b>controlled-feed program</b> ที่ให้อาหารน้อยกว่า Ross 308
+  ในช่วงกลางรอบ — ถ้าเทียบกับ Ross ตรงๆ ทุกเล้าจะขึ้น LIGHT/LOW
+  ทั้งที่จริงไก่กินตามโปรแกรมฟาร์ม FarmSense จึงใช้เกณฑ์ฟาร์มเป็นหลัก
+  แต่ยังโชว์ค่า Ross ในวงเล็บเป็นตัวเทียบรอง</p>
+</div>
+
+<!-- ============ CH 8 ============ -->
+<h1 class="chapter"><span class="num">8</span>น้ำ:อาหาร — สัญญาณเตือนเบอร์ 1</h1>
+
+<div class="intro">
+  <div class="eyebrow">แท็บ "สุขภาพ &amp; เติบโต" · §07A</div>
+  <p>อัตราส่วน <b>น้ำที่ดื่ม (ลิตร) : อาหารที่กิน (kg)</b> เป็นสัญญาณเตือนสุขภาพ
+  <b>เร็วที่สุด</b>ในการเลี้ยงไก่ — เห็นก่อนตัวอื่นทั้งหมด</p>
+</div>
+
+<h2>คำนวณยังไง</h2>
+<div class="formula">น้ำ:อาหาร = น้ำ (ลิตร/วัน) ÷ อาหาร (kg/วัน)</div>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่าง · ฟาร์ม 10 เล้า · เล้า 1</span>
+  <p>น้ำ 13,326 ลิตร ÷ อาหาร 6,600 kg = <b>2.02</b> → <span class="pill green">OK</span> (มาตรฐาน)</p>
+</div>
+
+<h2>เกณฑ์ — ที่ฟาร์มไทยใช้</h2>
+<table>
+  <thead><tr><th>ratio</th><th>สถานะ</th><th>หมายความว่า</th></tr></thead>
+  <tbody>
+    <tr class="bad"><td>&lt; 0.5 หรือ &gt; 6</td><td><span class="pill" style="background:#6b4ea8;color:#fff">ข้อมูลผิด</span></td><td>หน่วยข้อมูลผิด — ตรวจสอบไฟล์</td></tr>
+    <tr class="warn"><td>0.5 – 1.5</td><td><span class="pill amber">LOW</span></td><td>ไก่ดื่มน้ำน้อย → อาจเริ่มป่วย/หัวน้ำตัน</td></tr>
+    <tr class="good"><td><b>1.5 – 2.4</b></td><td><span class="pill green">OK</span></td><td>ปกติ (มาตรฐาน broiler)</td></tr>
+    <tr class="bad"><td>&gt; 2.4</td><td><span class="pill red">HIGH</span></td><td>น้ำสูงผิดปกติ → heat stress / ท้องเสีย / น้ำรั่ว</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warning">
+  <span class="tag">สัญญาณ "ไก่กำลังจะป่วย"</span>
+  <p>ratio <b>เปลี่ยนกะทันหัน</b>เป็นสัญญาณที่<b>เห็นก่อน</b>ที่ไก่จะตาย — โดยทั่วไป:</p>
+  <p>
+    📉 <b>ratio ตกแรง</b> (เช่น 2.0 → 1.3) = ไก่หยุดดื่มน้ำ มักจะป่วยภายใน 1–2 วัน<br>
+    📈 <b>ratio พุ่งสูง</b> (เช่น 2.0 → 2.8) = heat stress หรือท้องเสีย เริ่มแล้ว
+  </p>
+</div>
+
+<div class="callout action">
+  <span class="tag">เห็น LOW — ทำยังไง</span>
+  <p>
+    1. ลงเล้าเช็คหัวน้ำ — กดทดสอบ ดู cc/นาที (ดูเกณฑ์ในแท็บอุณหภูมิ § 5E)<br>
+    2. เช็คแรงดันน้ำที่ปั๊ม + วาล์ว<br>
+    3. ดูพฤติกรรมไก่ — กระจุกตัว? นอน? ขนแห้ง?<br>
+    4. ถ้าหัวน้ำปกติแต่ไก่ไม่ดื่ม = ไก่ป่วย โทรหา vet
+  </p>
+</div>
+
+<!-- ============ CH 9 ============ -->
+<h1 class="chapter"><span class="num">9</span>น้ำหนักไก่ vs Ross 308</h1>
+
+<div class="intro">
+  <div class="eyebrow">แท็บ "สุขภาพ &amp; เติบโต" · §07C</div>
+  <p>เทียบ<b>น้ำหนักตัวจริง (ที่ชั่ง)</b> กับ <b>มาตรฐาน Ross 308</b> ตามอายุ — บอกว่าไก่โตเร็ว/ช้า/ตามเกณฑ์</p>
+</div>
+
+<h2>คำนวณยังไง</h2>
+<div class="formula">มาตรฐานที่อายุนี้  = ดูจากตาราง Ross 308 (BW kg)
+ส่วนต่าง (%)        = (น.น.จริง − มาตรฐาน) ÷ มาตรฐาน × 100</div>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่าง · ฟาร์ม 10 เล้า · เล้า 1 (อายุ 36 วัน)</span>
+  <p>
+    • น.น.จริง = 2.28 kg<br>
+    • Ross 308 ที่อายุ 36 = 2.380 kg<br>
+    • <b>ส่วนต่าง = (2.28 − 2.380) ÷ 2.380 × 100 = −4.2%</b><br>
+    → สถานะ <span class="pill green">ON</span> (ภายในเกณฑ์ ±5%)
+  </p>
+</div>
+
+<h2>เกณฑ์</h2>
+<table>
+  <thead><tr><th>ส่วนต่าง</th><th>สถานะ</th><th>การตีความ</th></tr></thead>
+  <tbody>
+    <tr class="warn"><td>&lt; −5%</td><td><span class="pill amber">โตช้า (BEHIND)</span></td><td>เช็คอาหาร, สุขภาพ, density</td></tr>
+    <tr class="good"><td>−5% ถึง +5%</td><td><span class="pill green">ตามเกณฑ์ (ON)</span></td><td>ปกติ</td></tr>
+    <tr class="good"><td>&gt; +5%</td><td><span class="pill blue">โตเร็ว (AHEAD)</span></td><td>ดี (ถ้าทุกเล้าโตเร็ว = ระวังโตเร็วเกินอาจตายแบบ sudden death)</td></tr>
+  </tbody>
+</table>
+
+<!-- ============ CH 10 ============ -->
+<h1 class="chapter"><span class="num">10</span>อาหารหก / สูญเปล่า</h1>
+
+<div class="intro">
+  <div class="eyebrow">แท็บ "สุขภาพ &amp; เติบโต" · §07D</div>
+  <p>วัด<b>ช่องว่างระหว่างอาหารที่ลงเล้า กับอาหารที่ไก่กินจริง</b> — ส่วนต่างคืออาหารที่<b>ไม่ถึงปากไก่</b> (หกบนพื้น/ค้างในระบบ/ราง)</p>
+</div>
+
+<h2>สูตร</h2>
+<div class="formula">ช่องว่าง (%) = %อาหารลงสะสม − %อาหารที่กินสะสม</div>
+
+<h2>เกณฑ์</h2>
+<table>
+  <thead><tr><th>ช่องว่าง</th><th>สถานะ</th><th>การตีความ</th></tr></thead>
+  <tbody>
+    <tr class="good"><td>≤ 0.5%</td><td><span class="pill green">OK</span></td><td>ปกติ (อาหารส่วนใหญ่ถึงปากไก่)</td></tr>
+    <tr class="warn"><td>0.5 – 1.0%</td><td><span class="pill amber">เฝ้าระวัง</span></td><td>เริ่มมีหก — ตรวจรางและแพน</td></tr>
+    <tr class="bad"><td>&gt; 1.0%</td><td><span class="pill red">หกเยอะ</span></td><td>เงินรั่ว — ปรับระดับราง/ปริมาณการเดินอาหาร</td></tr>
+  </tbody>
+</table>
+
+<div class="callout note">
+  <span class="tag">เงินรั่วเท่าไหร่</span>
+  <p>ตัวอย่าง: ฟาร์ม 40,000 ตัว · ช่องว่าง 1.5% · อาหารทั้งรอบ ~160,000 kg
+  → อาหารหก 2,400 kg × 19 บาท = <b>~45,600 บาท</b>เสียเปล่าต่อรอบ
+  (ของฟาร์มเดียวรุ่นเดียว)</p>
+</div>
+
+<!-- ============ CH 11 ============ -->
+<h1 class="chapter"><span class="num">11</span>FCR &amp; กำไรต่อตัว</h1>
+
+<div class="intro">
+  <div class="eyebrow">แท็บ "FCR &amp; กำไร" · §04</div>
+  <p><b>FCR</b> (Feed Conversion Ratio) = อาหารที่กินหารด้วยน้ำหนักไก่ — ตัวเลขนี้กับน้ำหนักจับ
+  ตัดสินว่า<b>รุ่นนี้กำไรหรือขาดทุน</b></p>
+</div>
+
+<h2>สูตรกำไรต่อตัว</h2>
+<div class="formula">กำไร/ตัว = (น้ำหนัก × ราคาขาย)
+          − ราคาลูกไก่
+          − (น้ำหนัก × FCR × ราคาอาหาร)
+          − ค่าจัดการ</div>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่าง · สมมุติทุกอย่างมาตรฐาน</span>
+  <p>
+    • น้ำหนักจับ 2.7 kg, FCR 1.55<br>
+    • ราคาขาย 42 บาท/kg, ลูกไก่ 18, อาหาร 19, จัดการ 4
+  </p>
+  <p style="margin-top:6pt">
+    กำไร = (2.7 × 42) − 18 − (2.7 × 1.55 × 19) − 4<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;= 113.4 − 18 − 79.5 − 4<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;= <b>+11.9 บาท/ตัว</b>
+  </p>
+</div>
+
+<h2>Break-even FCR — จุดที่กำไรเป็นศูนย์</h2>
+<div class="formula">break-even FCR = (น้ำหนัก × ราคาขาย − ลูกไก่ − จัดการ) ÷ (น้ำหนัก × ราคาอาหาร)</div>
+
+<p>ถ้า <b>FCR จริง &gt; break-even</b> = <b>ขาดทุน</b> แม้น้ำหนักจะถึงเป้า</p>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่าง</span>
+  <p>ที่น้ำหนัก 2.7 kg ราคาเดิม: <b>break-even FCR = 1.86</b><br>
+  ฟาร์มที่ทำ FCR ได้ &lt; 1.86 = กำไร · &gt; 1.86 = ขาดทุน</p>
+</div>
+
+<h2>Sensitivity Matrix (§04A)</h2>
+<p>ตาราง 9×7 บนหน้าจอแสดงกำไร/ตัวที่<b>ทุก FCR × ทุกน้ำหนัก</b> — ใช้วางแผนได้ทันที
+  ว่า "ถ้าจับ 2.8 kg ต้องคุม FCR ให้ได้เท่าไหร่"</p>
+
+<table>
+  <thead><tr><th>สีในตาราง</th><th>กำไร/ตัว</th><th>หมายความว่า</th></tr></thead>
+  <tbody>
+    <tr class="good"><td><span class="pill green">เขียวเข้ม</span></td><td>≥ 15 บ.</td><td>กำไรดี</td></tr>
+    <tr class="warn"><td><span class="pill amber">เหลือง</span></td><td>5 – 15</td><td>กำไรพอใช้</td></tr>
+    <tr class="bad"><td><span class="pill red">แดงอ่อน</span></td><td>0 – 5</td><td>ใกล้ break-even</td></tr>
+    <tr class="bad"><td><span class="pill red">แดงทึบ</span></td><td>&lt; 0</td><td>ขาดทุนแน่นอน</td></tr>
+  </tbody>
+</table>
+
+<div class="callout note">
+  <span class="tag">หมายเหตุ</span>
+  <p>ตารางใช้ราคาที่ตั้งไว้บนหน้าจอ (default ราคาขาย 42, ลูกไก่ 18, อาหาร 19, จัดการ 4)
+  <b>ปรับราคาได้ทันที</b>ในกล่องด้านบน ตารางทุกตัวเลขจะ recompute ทันที — ใช้ลองดูสถานการณ์ราคาต่างๆ</p>
+</div>
+
+<!-- ============ CH 12 ============ -->
+<h1 class="chapter"><span class="num">12</span>อุณหภูมิ &amp; แรงลม</h1>
+
+<div class="intro">
+  <div class="eyebrow">แท็บ "อุณหภูมิ &amp; ลม" · §05</div>
+  <p>FarmSense ดึงเกณฑ์<b>รายวัน</b>จากไฟล์เกณฑ์ของฟาร์มเอง (อายุ 1–42 วัน)
+  ไม่ใช่เกณฑ์เฉลี่ยช่วงกว้าง — แม่นกว่าและเข้ากับ practice ของฟาร์มจริง</p>
+</div>
+
+<h2>เกณฑ์สำคัญ</h2>
+<table>
+  <thead><tr><th>อายุไก่</th><th>อุณหภูมิเป้า</th><th>ความเร็วลม FPM</th><th>ความหมาย</th></tr></thead>
+  <tbody>
+    <tr><td>วันที่ 1</td><td><b>33°C</b></td><td>0 (โช๊คเท่านั้น)</td><td>ลูกไก่เพิ่งลง อบอุ่น ไม่ต้องลม</td></tr>
+    <tr><td>วันที่ 7</td><td>31.2°C</td><td>50–150</td><td>ขยายกก เริ่มเปิดลม</td></tr>
+    <tr><td>วันที่ 14</td><td>29.1°C</td><td>200–250</td><td>ใช้เครื่องระบาย</td></tr>
+    <tr><td>วันที่ 21</td><td>27°C</td><td>300–400</td><td>เร่งลม</td></tr>
+    <tr><td>วันที่ 28</td><td>24.9°C</td><td>500–600</td><td>ลมแรงเต็มที่</td></tr>
+    <tr><td>วันที่ 35</td><td>22.8°C</td><td>600–650</td><td>ก่อนจับ</td></tr>
+    <tr><td>วันที่ 42</td><td>19.7°C</td><td>600–650</td><td>วันจับ</td></tr>
+  </tbody>
+</table>
+
+<div class="callout note">
+  <span class="tag">FPM ↔ m/s</span>
+  <p>1 m/s ≈ 196.85 FPM<br>เช่น 600 FPM ≈ 3 m/s</p>
+</div>
+
+<h2>Wind Chill Calculator (§05C)</h2>
+<p>ใส่<b>อายุไก่</b>กับ<b>อุณหภูมิห้องตอนนี้</b> ระบบบอกว่าต้องเปิดลมแรงเท่าไหร่</p>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่าง</span>
+  <p>ไก่อายุ 35 วัน · ห้อง 30°C → เกณฑ์ต้องการให้ไก่รู้สึก 22.8°C<br>
+  ระบบคำนวณ: <b>ต้องใช้ลม ≥ 2.5 m/s</b> (≈ 492 FPM) เพื่อให้ effective temp = 22.8°C</p>
+  <p style="margin-top:6pt; color:var(--ink-soft)">สูตร: effective_temp = ambient − (wind_m/s × 3.4)</p>
+</div>
+
+<!-- ============ CH 13 ============ -->
+<h1 class="chapter"><span class="num">13</span>ประวัติ &amp; แนวโน้มข้ามรอบ</h1>
+
+<div class="intro">
+  <div class="eyebrow">แท็บ "ประวัติ &amp; แนวโน้ม" · §08</div>
+  <p>ทุกครั้งที่อัปโหลดไฟล์ ระบบจะ<b>บันทึก snapshot ไว้ในเบราว์เซอร์อัตโนมัติ</b> —
+  ใช้เทียบ "รุ่นนี้กับรุ่นก่อน" และดู "ตายเร่งขึ้นไหม"</p>
+</div>
+
+<h2>ความเร็วการตาย (mortality velocity)</h2>
+<p>คำนวณระหว่าง snapshot 2 อันของฟาร์ม+รุ่นเดียวกัน:</p>
+<div class="formula">ความเร็วการตาย = (%ตายตอนนี้ − %ตายเมื่อก่อน) ÷ (อายุตอนนี้ − อายุเมื่อก่อน)</div>
+<p>ผลออกมาเป็น <b>%ตายเพิ่มขึ้นต่อวัน</b></p>
+
+<div class="callout example">
+  <span class="tag">ตัวอย่าง</span>
+  <p>ฟาร์ม X รุ่น 14:</p>
+  <ul>
+    <li>10 พ.ค. (อายุ 30 วัน) — %ตาย = 1.5%</li>
+    <li>13 พ.ค. (อายุ 33 วัน) — %ตาย = 2.4%</li>
+  </ul>
+  <p>ความเร็ว = (2.4 − 1.5) ÷ (33 − 30) = <b>0.30 %/วัน</b> → <span class="pill red">เร่งขึ้น</span></p>
+</div>
+
+<table>
+  <thead><tr><th>ความเร็ว</th><th>สี</th><th>การตีความ</th></tr></thead>
+  <tbody>
+    <tr class="good"><td>≤ 0.12 %/วัน</td><td><span class="pill green">สงบ</span></td><td>ปกติของช่วงเลี้ยง</td></tr>
+    <tr class="warn"><td>0.12 – 0.25</td><td><span class="pill amber">เฝ้าระวัง</span></td><td>เริ่มเร่งขึ้น ดูสาเหตุ</td></tr>
+    <tr class="bad"><td>&gt; 0.25</td><td><span class="pill red">เร่งขึ้น</span></td><td>มีปัญหาเร่ง ต้องแก้ด่วน</td></tr>
+  </tbody>
+</table>
+
+<!-- ============ CH 14 ============ -->
+<h1 class="chapter"><span class="num">14</span>คำถามที่พบบ่อย</h1>
+
+<h3>Q: ข้อมูลของฟาร์มจะถูกส่งไปไหนไหม</h3>
+<p><b>ไม่</b> — ทุกการคำนวณเกิดในเบราว์เซอร์ของคุณเท่านั้น ไม่มี server, ไม่มี cookie tracking
+  คุณตรวจสอบได้เองโดยปิดอินเทอร์เน็ตแล้วใช้ระบบ — ใช้ได้ปกติ (ยกเว้นการโหลดฟอนต์ Google ครั้งแรก)</p>
+
+<h3>Q: ใช้กับไฟล์ใบหน้าเล้าของฟาร์มอื่นที่ไม่ใช่ template เดียวกันได้ไหม</h3>
+<p><b>ได้</b> — ระบบรองรับหลาย template และจะแสดงรายงานว่าหาคอลัมน์อะไรไม่เจอ
+  ใช้ปุ่ม <b>"⚙ ปรับการ map คอลัมน์"</b> เลือกเองครั้งเดียว — ระบบจดจำ template นั้นไว้
+  ครั้งหน้าอัปโหลดไฟล์หน้าตาเดียวกันจะ map อัตโนมัติ</p>
+
+<h3>Q: ระบบคำนวณ %ตายสะสมเองหรืออ่านจากไฟล์</h3>
+<p><b>อ่านจากไฟล์</b> (คอลัมน์ "%ตายสะสม") — เพราะฟาร์มกรอกค่านี้ในใบหน้าเล้าอยู่แล้ว
+  แต่ระบบมีการ<b>ตรวจสอบความสอดคล้อง</b> โดยเทียบกับ ตายสะสม÷ยอดลง×100 อัตโนมัติ</p>
+
+<h3>Q: คะแนนความเสี่ยงเชื่อถือได้แค่ไหน</h3>
+<p>เลขที่เห็น<b>เลขคำนวณถูกต้อง</b> — ผ่านการตรวจสอบอิสระ 772 จุดทุกครั้ง
+  แต่<b>น้ำหนักของแต่ละกฎ</b> (เช่น "%ตาย 4% +40 คะแนน") เป็นค่าที่ตั้งตามความเหมาะสมทั่วไป —
+  แนะนำให้สัตวบาลของฟาร์มรีวิวและปรับให้เข้ากับ practice ของฟาร์มเอง</p>
+
+<h3>Q: ใช้ฟรีหรือเปล่า</h3>
+<p><b>ฟรี</b> — เป็นโปรเจกต์ open source บน GitHub
+  ไม่มีค่าใช้จ่าย ไม่มีโฆษณา ไม่มีการเก็บข้อมูล</p>
+
+<h3>Q: ดูประวัติบนเครื่องอื่นได้ไหม</h3>
+<p><b>ไม่</b> — ประวัติเก็บในเบราว์เซอร์ของเครื่องที่อัปโหลด ถ้าจะดูบนเครื่องอื่นต้องอัปโหลดไฟล์ที่นั่นใหม่
+  (เป็น trade-off ของการเก็บข้อมูลใน local เพื่อความเป็นส่วนตัว)</p>
+
+<h3>Q: เพิ่มเกณฑ์/ปรับเกณฑ์ของฟาร์มได้ไหม</h3>
+<p>ตอนนี้ต้องแก้ใน source code (<span class="mono">constants.js</span>) — ในแผนการพัฒนาต่อ
+  จะมีหน้า "ตั้งค่าเกณฑ์" ให้ปรับได้บนหน้าจอเลย</p>
+
+<div class="footer-ref">
+  FarmSense v1.0 · github.com/HolisticPrimary/Farm-Analytics<br>
+  เอกสารฉบับนี้ใช้คู่กับเอกสารทางเทคนิค CALCULATIONS.md ใน repo
+</div>
+
+</div>
+</body>
+</html>
