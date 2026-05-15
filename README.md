@@ -8,6 +8,8 @@ A fully client-side broiler-farm analytics tool. Upload the daily Excel
 
 **🌐 ใช้งานจริง / Live:** https://holisticprimary.github.io/Farm-Analytics/
 
+**📖 คู่มือการคำนวณ:** [CALCULATIONS.md](CALCULATIONS.md) — สูตรทุกแท็บ + ที่มาข้อมูล + เกณฑ์ตัดสิน (ใช้รีวิวความถูกต้อง)
+
 ## คุณสมบัติ
 
 | แท็บ | วิเคราะห์ |
