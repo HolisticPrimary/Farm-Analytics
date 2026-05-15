@@ -89,6 +89,7 @@ function farmFeedLookup(age) { return farmDayLookup(FARM_FEED, age); }
 function farmTempLookup(age) { return farmDayLookup(FARM_TEMP, age); }
 function farmPumpLookup(age) { return farmDayLookup(FARM_PUMP, age); }
 function farmFpmLookup(age)  { return farmDayLookup(FARM_FPM, age); }
+function mixedBwLookup(age)  { return farmDayLookup(MIXED_BW, age); }
 
 function feedStatus(dev) {
   if (dev > 5)      return 'OVERFEED';
@@ -188,17 +189,23 @@ function mortalityBreakdown(h) {
   return { died, culled, total, morning, evening, cullRate, pattern };
 }
 
-// Actual measured body weight vs the Ross 308 standard at the same age.
+// Compares actual measured weight against the MIXED-SEX standard (PRIMARY)
+// from the farm's own "คละเพศ" reference table. Ross 308 BW is kept along
+// as a secondary reference only.
 function weightVsStandard(h) {
   if (!h.age || !h.wt_age) return null;
-  const std = rossLookup(h.age);
-  if (!std) return null;
-  const devPct = ((h.wt_age - std.bw) / std.bw) * 100;
+  const stdBw = mixedBwLookup(h.age);
+  if (stdBw == null || stdBw === 0) return null;
+  const devPct = ((h.wt_age - stdBw) / stdBw) * 100;
   let status;
   if (devPct < -5)     status = 'BEHIND';
   else if (devPct > 5) status = 'AHEAD';
   else                 status = 'ON';
-  return { actual: h.wt_age, std: std.bw, devPct, status };
+  // SECONDARY reference: Ross 308 pure-breed BW
+  const ross = rossLookup(h.age);
+  const rossBw = ross ? ross.bw : null;
+  const rossDev = rossBw ? ((h.wt_age - rossBw) / rossBw) * 100 : null;
+  return { actual: h.wt_age, std: stdBw, devPct, status, rossBw, rossDev };
 }
 
 // Feed wastage: cumulative % loaded into the house minus % actually eaten.

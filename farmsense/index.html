@@ -278,7 +278,7 @@
     <div class="tab-content" id="tab-health">
       <h2 class="sec"><span class="num">§ 07</span> สุขภาพรายวัน &amp; การเติบโต</h2>
       <div class="sec-rule"></div>
-      <p class="lede">ข้อมูลที่ดึงเพิ่มจากใบหน้าเล้า — น้ำ:อาหาร, แยกตายจริง/คัด, รูปแบบเช้า/เย็น, น้ำหนักจริงเทียบ Ross 308, อาหารหก/สูญเปล่า</p>
+      <p class="lede">ข้อมูลที่ดึงเพิ่มจากใบหน้าเล้า — น้ำ:อาหาร, แยกตายจริง/คัด, รูปแบบเช้า/เย็น, น้ำหนักจริงเทียบเกณฑ์คละเพศ, อาหารหก/สูญเปล่า</p>
 
       <div class="kpi-row" id="health-kpi"></div>
 
@@ -316,14 +316,17 @@
       </div>
 
       <div class="card">
-        <h4>7C · น้ำหนักจริง เทียบ Ross 308 standard</h4>
-        <div class="card-sub">เทียบน้ำหนักชั่งจริงกับมาตรฐานตามอายุ — ต่ำกว่าเกณฑ์ = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
+        <h4>7C · น้ำหนักจริง เทียบเกณฑ์ "คละเพศ"</h4>
+        <div class="card-sub">เทียบน้ำหนักชั่งจริงกับ <b>เกณฑ์ STD คละเพศของฟาร์ม</b> (อายุ 1–50 วัน) เป็นหลัก · Ross 308 แสดงเป็นตัวเทียบรอง — ต่ำกว่าเกณฑ์ = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
         <div class="table-wrap">
           <table id="weight-table">
             <thead>
               <tr>
                 <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
-                <th>น.น.จริง (kg)</th><th>Ross 308 (kg)</th><th>ส่วนต่าง</th><th>สถานะ</th>
+                <th>น.น.จริง (kg)</th>
+                <th>เกณฑ์คละเพศ (kg)<br><small>/ Ross 308</small></th>
+                <th>ส่วนต่าง<br><small>/ vs Ross</small></th>
+                <th>สถานะ</th>
               </tr>
             </thead>
             <tbody id="weight-tbody"></tbody>

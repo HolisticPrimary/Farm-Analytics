@@ -965,7 +965,7 @@ footer.colophon {
     <div class="tab-content" id="tab-health">
       <h2 class="sec"><span class="num">§ 07</span> สุขภาพรายวัน &amp; การเติบโต</h2>
       <div class="sec-rule"></div>
-      <p class="lede">ข้อมูลที่ดึงเพิ่มจากใบหน้าเล้า — น้ำ:อาหาร, แยกตายจริง/คัด, รูปแบบเช้า/เย็น, น้ำหนักจริงเทียบ Ross 308, อาหารหก/สูญเปล่า</p>
+      <p class="lede">ข้อมูลที่ดึงเพิ่มจากใบหน้าเล้า — น้ำ:อาหาร, แยกตายจริง/คัด, รูปแบบเช้า/เย็น, น้ำหนักจริงเทียบเกณฑ์คละเพศ, อาหารหก/สูญเปล่า</p>
 
       <div class="kpi-row" id="health-kpi"></div>
 
@@ -1003,14 +1003,17 @@ footer.colophon {
       </div>
 
       <div class="card">
-        <h4>7C · น้ำหนักจริง เทียบ Ross 308 standard</h4>
-        <div class="card-sub">เทียบน้ำหนักชั่งจริงกับมาตรฐานตามอายุ — ต่ำกว่าเกณฑ์ = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
+        <h4>7C · น้ำหนักจริง เทียบเกณฑ์ "คละเพศ"</h4>
+        <div class="card-sub">เทียบน้ำหนักชั่งจริงกับ <b>เกณฑ์ STD คละเพศของฟาร์ม</b> (อายุ 1–50 วัน) เป็นหลัก · Ross 308 แสดงเป็นตัวเทียบรอง — ต่ำกว่าเกณฑ์ = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
         <div class="table-wrap">
           <table id="weight-table">
             <thead>
               <tr>
                 <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
-                <th>น.น.จริง (kg)</th><th>Ross 308 (kg)</th><th>ส่วนต่าง</th><th>สถานะ</th>
+                <th>น.น.จริง (kg)</th>
+                <th>เกณฑ์คละเพศ (kg)<br><small>/ Ross 308</small></th>
+                <th>ส่วนต่าง<br><small>/ vs Ross</small></th>
+                <th>สถานะ</th>
               </tr>
             </thead>
             <tbody id="weight-tbody"></tbody>
@@ -1196,6 +1199,20 @@ const LIGHT_PROGRAM = [
 // Vaccination ages (days) — sheets "อายุ 7-14 วัน" / "อายุ 15-28 วัน".
 const VACCINE_AGES = [10, 14, 18];
 
+// Mixed-sex broiler body-weight standard (kg) by day of age — from the
+// "คละเพศ" reference sheet in the farm's face-sheet file. Used as the
+// PRIMARY weight benchmark; Ross 308 BW is kept as a secondary reference.
+const MIXED_BW = {
+  1:0.062,  2:0.081,  3:0.102,  4:0.125,  5:0.151,  6:0.181,  7:0.213,
+  8:0.249,  9:0.288,  10:0.330, 11:0.376, 12:0.425, 13:0.477, 14:0.533,
+  15:0.592, 16:0.655, 17:0.720, 18:0.789, 19:0.860, 20:0.935, 21:1.012,
+  22:1.092, 23:1.174, 24:1.258, 25:1.345, 26:1.434, 27:1.524, 28:1.616,
+  29:1.710, 30:1.805, 31:1.901, 32:1.999, 33:2.097, 34:2.196, 35:2.296,
+  36:2.396, 37:2.496, 38:2.597, 39:2.697, 40:2.798, 41:2.898, 42:2.998,
+  43:3.097, 44:3.197, 45:3.295, 46:3.393, 47:3.490, 48:3.586, 49:3.681,
+  50:3.776,
+};
+
 const FARM_PALETTE = ['phiphat','pumwong','yungruay','farm4','farm5','farm6'];
 const RANK_CLASS = ['r1','r2','r3','r3','r3','r3'];
 
@@ -1376,6 +1393,7 @@ function farmFeedLookup(age) { return farmDayLookup(FARM_FEED, age); }
 function farmTempLookup(age) { return farmDayLookup(FARM_TEMP, age); }
 function farmPumpLookup(age) { return farmDayLookup(FARM_PUMP, age); }
 function farmFpmLookup(age)  { return farmDayLookup(FARM_FPM, age); }
+function mixedBwLookup(age)  { return farmDayLookup(MIXED_BW, age); }
 
 function feedStatus(dev) {
   if (dev > 5)      return 'OVERFEED';
@@ -1475,17 +1493,23 @@ function mortalityBreakdown(h) {
   return { died, culled, total, morning, evening, cullRate, pattern };
 }
 
-// Actual measured body weight vs the Ross 308 standard at the same age.
+// Compares actual measured weight against the MIXED-SEX standard (PRIMARY)
+// from the farm's own "คละเพศ" reference table. Ross 308 BW is kept along
+// as a secondary reference only.
 function weightVsStandard(h) {
   if (!h.age || !h.wt_age) return null;
-  const std = rossLookup(h.age);
-  if (!std) return null;
-  const devPct = ((h.wt_age - std.bw) / std.bw) * 100;
+  const stdBw = mixedBwLookup(h.age);
+  if (stdBw == null || stdBw === 0) return null;
+  const devPct = ((h.wt_age - stdBw) / stdBw) * 100;
   let status;
   if (devPct < -5)     status = 'BEHIND';
   else if (devPct > 5) status = 'AHEAD';
   else                 status = 'ON';
-  return { actual: h.wt_age, std: std.bw, devPct, status };
+  // SECONDARY reference: Ross 308 pure-breed BW
+  const ross = rossLookup(h.age);
+  const rossBw = ross ? ross.bw : null;
+  const rossDev = rossBw ? ((h.wt_age - rossBw) / rossBw) * 100 : null;
+  return { actual: h.wt_age, std: stdBw, devPct, status, rossBw, rossDev };
 }
 
 // Feed wastage: cumulative % loaded into the house minus % actually eaten.
@@ -2662,7 +2686,7 @@ function renderFCR(farmKeys) {
     const avgAge = farmAvgAge(farm);
     const farmRem = farm.houses.reduce((s,h) => s + (h.qty_rem||0), 0);
     const std = rossLookup(Math.round(avgAge));
-    const stdWt = std ? std.bw : 2.7;
+    const stdWt = mixedBwLookup(Math.round(avgAge)) || (std ? std.bw : 2.7);
     const stdFCR = std ? std.fcr : 1.55;
     const farmWts = farm.houses.map(h => h.wt_actual).filter(w => w);
     const avgWt = farmWts.length > 0 ? farmWts.reduce((s,w)=>s+w,0)/farmWts.length : stdWt;
@@ -2895,7 +2919,7 @@ function renderHealth(farmKeys) {
     <div class="stat">
       <div class="lab">เล้าโตช้ากว่าเกณฑ์</div>
       <div class="val">${wv.length ? behind : '–'}</div>
-      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; Ross 308 −5%</div>
+      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; เกณฑ์คละเพศ −5%</div>
     </div>
   `;
 
@@ -2939,7 +2963,7 @@ function renderHealth(farmKeys) {
   document.getElementById('cull-tbody').innerHTML = cullRows ||
     emptyRow(8, 'ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"');
 
-  // ---------- 7C · actual weight vs Ross 308 ----------
+  // ---------- 7C · actual weight vs mixed-sex standard (Ross 308 secondary) ----------
   const weightRows = wv
     .sort((a,b) => a.w.devPct - b.w.devPct)
     .map((x, i) => {
@@ -2947,13 +2971,14 @@ function renderHealth(farmKeys) {
       const rowCls = w.status === 'BEHIND' ? 'crit' : '';
       const devCls = w.status === 'BEHIND' ? 'pct-c' : w.status === 'AHEAD' ? 'pct-o' : 'pct-w';
       const sign = w.devPct >= 0 ? '+' : '';
+      const rossSign = w.rossDev != null && w.rossDev >= 0 ? '+' : '';
       return `<tr class="${rowCls}">
         <td><b>${i+1}</b></td>
         <td>${pill(h)}</td>
         <td class="mono">${h.age}</td>
         <td class="mono">${w.actual.toFixed(3)}</td>
-        <td class="mono">${w.std.toFixed(3)}</td>
-        <td class="pct ${devCls}">${sign}${w.devPct.toFixed(1)}%</td>
+        <td class="mono">${w.std.toFixed(3)}<br><small style="color:var(--ink-mute)">Ross ${w.rossBw != null ? w.rossBw.toFixed(3) : '–'}</small></td>
+        <td class="pct ${devCls}">${sign}${w.devPct.toFixed(1)}%<br><small style="color:var(--ink-mute)">${w.rossDev != null ? rossSign + w.rossDev.toFixed(1) + '%' : ''}</small></td>
         <td><span class="pill ${WEIGHT_PILL[w.status]}">${WEIGHT_LABEL[w.status]}</span></td>
       </tr>`;
     }).join('');

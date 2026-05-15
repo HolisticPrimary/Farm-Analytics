@@ -87,6 +87,30 @@ function farmFeedNearest(age) {
   }
   return FARM_FEED_REF[nearest];
 }
+
+// Mixed-sex broiler BW (kg) — PRIMARY weight benchmark, from the
+// "คละเพศ" reference sheet. Independent copy of the reference data.
+const MIXED_BW_REF = {
+  1:0.062, 2:0.081, 3:0.102, 4:0.125, 5:0.151, 6:0.181, 7:0.213,
+  8:0.249, 9:0.288, 10:0.330, 11:0.376, 12:0.425, 13:0.477, 14:0.533,
+  15:0.592, 16:0.655, 17:0.720, 18:0.789, 19:0.860, 20:0.935, 21:1.012,
+  22:1.092, 23:1.174, 24:1.258, 25:1.345, 26:1.434, 27:1.524, 28:1.616,
+  29:1.710, 30:1.805, 31:1.901, 32:1.999, 33:2.097, 34:2.196, 35:2.296,
+  36:2.396, 37:2.496, 38:2.597, 39:2.697, 40:2.798, 41:2.898, 42:2.998,
+  43:3.097, 44:3.197, 45:3.295, 46:3.393, 47:3.490, 48:3.586, 49:3.681,
+  50:3.776,
+};
+function mixedBwNearest(age) {
+  if (MIXED_BW_REF[age] != null) return MIXED_BW_REF[age];
+  if (age <= 1) return MIXED_BW_REF[1];
+  if (age >= 50) return MIXED_BW_REF[50];
+  let nearest = 1, bestD = 1e9;
+  for (const k of Object.keys(MIXED_BW_REF)) {
+    const d = Math.abs(+k - age);
+    if (d < bestD) { bestD = d; nearest = +k; }
+  }
+  return MIXED_BW_REF[nearest];
+}
 function num(v) {                          // independent numeric parser
   if (v == null || v === '') return null;
   if (typeof v === 'number') return v;
@@ -166,7 +190,7 @@ function indRiskScore(b, indHouses) {
     if (pat === 'NIGHT') score += 8;
   }
   if (b.age && b.wt_age) {
-    const stdBw = rossNearest(b.age).bw;
+    const stdBw = mixedBwNearest(b.age);
     const dev = (b.wt_age - stdBw) / stdBw * 100;
     if (dev < -10)     score += 15;
     else if (dev < -5) score += 8;
@@ -355,11 +379,14 @@ for (const fn of files) {
           (died + culled) > 0 ? culled / (died + culled) * 100 : 0, 0.05);
     }
 
-    // --- 5. derived: weight vs Ross 308 ---
+    // --- 5. derived: weight vs mixed-sex (PRIMARY) + Ross 308 (secondary) ---
     const pwv = A.weightVsStandard(p);
     if (b.age && b.wt_age) {
-      const stdBw = rossNearest(b.age).bw;
-      cmp('weightDev%', hid, pwv ? pwv.devPct : null, (b.wt_age - stdBw) / stdBw * 100, 0.05);
+      const mixedStd = mixedBwNearest(b.age);
+      const rossStd  = rossNearest(b.age).bw;
+      cmp('weightStd(mixed)', hid, pwv ? pwv.std : null, mixedStd, 0.0005);
+      cmp('weightDev%',       hid, pwv ? pwv.devPct : null, (b.wt_age - mixedStd) / mixedStd * 100, 0.05);
+      cmp('rossWeightDev%',   hid, pwv ? pwv.rossDev : null, (b.wt_age - rossStd) / rossStd * 100, 0.05);
     }
 
     // --- 6. derived: feed waste gap ---

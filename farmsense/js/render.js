@@ -510,7 +510,7 @@ function renderFCR(farmKeys) {
     const avgAge = farmAvgAge(farm);
     const farmRem = farm.houses.reduce((s,h) => s + (h.qty_rem||0), 0);
     const std = rossLookup(Math.round(avgAge));
-    const stdWt = std ? std.bw : 2.7;
+    const stdWt = mixedBwLookup(Math.round(avgAge)) || (std ? std.bw : 2.7);
     const stdFCR = std ? std.fcr : 1.55;
     const farmWts = farm.houses.map(h => h.wt_actual).filter(w => w);
     const avgWt = farmWts.length > 0 ? farmWts.reduce((s,w)=>s+w,0)/farmWts.length : stdWt;

@@ -56,7 +56,7 @@ function renderHealth(farmKeys) {
     <div class="stat">
       <div class="lab">เล้าโตช้ากว่าเกณฑ์</div>
       <div class="val">${wv.length ? behind : '–'}</div>
-      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; Ross 308 −5%</div>
+      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; เกณฑ์คละเพศ −5%</div>
     </div>
   `;
 
@@ -100,7 +100,7 @@ function renderHealth(farmKeys) {
   document.getElementById('cull-tbody').innerHTML = cullRows ||
     emptyRow(8, 'ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"');
 
-  // ---------- 7C · actual weight vs Ross 308 ----------
+  // ---------- 7C · actual weight vs mixed-sex standard (Ross 308 secondary) ----------
   const weightRows = wv
     .sort((a,b) => a.w.devPct - b.w.devPct)
     .map((x, i) => {
@@ -108,13 +108,14 @@ function renderHealth(farmKeys) {
       const rowCls = w.status === 'BEHIND' ? 'crit' : '';
       const devCls = w.status === 'BEHIND' ? 'pct-c' : w.status === 'AHEAD' ? 'pct-o' : 'pct-w';
       const sign = w.devPct >= 0 ? '+' : '';
+      const rossSign = w.rossDev != null && w.rossDev >= 0 ? '+' : '';
       return `<tr class="${rowCls}">
         <td><b>${i+1}</b></td>
         <td>${pill(h)}</td>
         <td class="mono">${h.age}</td>
         <td class="mono">${w.actual.toFixed(3)}</td>
-        <td class="mono">${w.std.toFixed(3)}</td>
-        <td class="pct ${devCls}">${sign}${w.devPct.toFixed(1)}%</td>
+        <td class="mono">${w.std.toFixed(3)}<br><small style="color:var(--ink-mute)">Ross ${w.rossBw != null ? w.rossBw.toFixed(3) : '–'}</small></td>
+        <td class="pct ${devCls}">${sign}${w.devPct.toFixed(1)}%<br><small style="color:var(--ink-mute)">${w.rossDev != null ? rossSign + w.rossDev.toFixed(1) + '%' : ''}</small></td>
         <td><span class="pill ${WEIGHT_PILL[w.status]}">${WEIGHT_LABEL[w.status]}</span></td>
       </tr>`;
     }).join('');

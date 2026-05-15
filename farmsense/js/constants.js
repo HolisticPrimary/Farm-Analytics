@@ -102,6 +102,20 @@ const LIGHT_PROGRAM = [
 // Vaccination ages (days) — sheets "อายุ 7-14 วัน" / "อายุ 15-28 วัน".
 const VACCINE_AGES = [10, 14, 18];
 
+// Mixed-sex broiler body-weight standard (kg) by day of age — from the
+// "คละเพศ" reference sheet in the farm's face-sheet file. Used as the
+// PRIMARY weight benchmark; Ross 308 BW is kept as a secondary reference.
+const MIXED_BW = {
+  1:0.062,  2:0.081,  3:0.102,  4:0.125,  5:0.151,  6:0.181,  7:0.213,
+  8:0.249,  9:0.288,  10:0.330, 11:0.376, 12:0.425, 13:0.477, 14:0.533,
+  15:0.592, 16:0.655, 17:0.720, 18:0.789, 19:0.860, 20:0.935, 21:1.012,
+  22:1.092, 23:1.174, 24:1.258, 25:1.345, 26:1.434, 27:1.524, 28:1.616,
+  29:1.710, 30:1.805, 31:1.901, 32:1.999, 33:2.097, 34:2.196, 35:2.296,
+  36:2.396, 37:2.496, 38:2.597, 39:2.697, 40:2.798, 41:2.898, 42:2.998,
+  43:3.097, 44:3.197, 45:3.295, 46:3.393, 47:3.490, 48:3.586, 49:3.681,
+  50:3.776,
+};
+
 const FARM_PALETTE = ['phiphat','pumwong','yungruay','farm4','farm5','farm6'];
 const RANK_CLASS = ['r1','r2','r3','r3','r3','r3'];
 
