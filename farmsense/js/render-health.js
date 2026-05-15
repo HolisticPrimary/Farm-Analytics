@@ -108,14 +108,13 @@ function renderHealth(farmKeys) {
       const rowCls = w.status === 'BEHIND' ? 'crit' : '';
       const devCls = w.status === 'BEHIND' ? 'pct-c' : w.status === 'AHEAD' ? 'pct-o' : 'pct-w';
       const sign = w.devPct >= 0 ? '+' : '';
-      const rossSign = w.rossDev != null && w.rossDev >= 0 ? '+' : '';
       return `<tr class="${rowCls}">
         <td><b>${i+1}</b></td>
         <td>${pill(h)}</td>
         <td class="mono">${h.age}</td>
         <td class="mono">${w.actual.toFixed(3)}</td>
-        <td class="mono">${w.std.toFixed(3)}<br><small style="color:var(--ink-mute)">Ross ${w.rossBw != null ? w.rossBw.toFixed(3) : '–'}</small></td>
-        <td class="pct ${devCls}">${sign}${w.devPct.toFixed(1)}%<br><small style="color:var(--ink-mute)">${w.rossDev != null ? rossSign + w.rossDev.toFixed(1) + '%' : ''}</small></td>
+        <td class="mono">${w.std.toFixed(3)}</td>
+        <td class="pct ${devCls}">${sign}${w.devPct.toFixed(1)}%</td>
         <td><span class="pill ${WEIGHT_PILL[w.status]}">${WEIGHT_LABEL[w.status]}</span></td>
       </tr>`;
     }).join('');

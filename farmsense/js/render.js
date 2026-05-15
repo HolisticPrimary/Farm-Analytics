@@ -420,7 +420,6 @@ function renderFeed(farmKeys) {
     const rowCls = h.status === 'CRITICAL' ? 'crit' : h.status === 'LOW' ? 'high' : '';
     const devCls = h.dev > 5 ? 'pct-c' : h.dev < -15 ? 'pct-c' : h.dev < -5 ? 'pct-w' : 'pct-o';
     const devSign = h.dev >= 0 ? '+' : '';
-    const rossSign = h.rossDev != null && h.rossDev >= 0 ? '+' : '';
     return `
       <tr class="${rowCls}">
         <td><b>${i+1}</b></td>
@@ -429,8 +428,8 @@ function renderFeed(farmKeys) {
         <td class="mono">${fmtNum(h.qty_rem)}</td>
         <td class="mono">${fmtNum(h.feed_day)}</td>
         <td class="mono">${h.feedPerBird.toFixed(1)}</td>
-        <td class="mono">${h.stdFeed}<br><small style="color:var(--ink-mute)">Ross ${h.rossFeed != null ? h.rossFeed : '–'}</small></td>
-        <td class="pct ${devCls}">${devSign}${h.dev.toFixed(1)}%<br><small style="color:var(--ink-mute)">${h.rossDev != null ? rossSign + h.rossDev.toFixed(1) + '%' : ''}</small></td>
+        <td class="mono">${h.stdFeed}</td>
+        <td class="pct ${devCls}">${devSign}${h.dev.toFixed(1)}%</td>
         <td><span class="pill ${STATUS_PILL[h.status]}">${STATUS_LABEL[h.status]}</span></td>
         <td style="font-size:11px; color:var(--ink-soft)">${ADVICE[h.status]}</td>
       </tr>
@@ -497,13 +496,6 @@ function renderFCR(farmKeys) {
   sensBody += '</tbody>';
   document.getElementById('sens-table').innerHTML = sensHeader + sensBody;
 
-  // Ross 308 table
-  const rossRows = [7, 14, 21, 28, 32, 35, 38, 40, 42].map(age => {
-    const r = ROSS308[age];
-    return `<tr class="std"><td><b>${age}</b></td><td>${r.bw.toFixed(3)}</td><td>${r.daily}</td><td>${r.cum.toFixed(3)}</td><td><b>${r.fcr.toFixed(2)}</b></td><td>${r.adg}</td></tr>`;
-  }).join('');
-  document.getElementById('ross-tbody').innerHTML = rossRows;
-
   // Per-farm profit
   const farmProfit = farmKeys.map(fk => {
     const farm = STATE.farms[fk];
@@ -544,7 +536,7 @@ function renderFCR(farmKeys) {
         </tbody>
       </table>
     </div>
-    <div class="insight">⚡ <b>หมายเหตุ:</b> ตัวเลข FCR estimate = Ross 308 + 0.10 (ตามสภาพไทย) · ใช้ทำ scenario planning เท่านั้น · ของจริงต้องวัดหลังจับ</div>
+    <div class="insight">⚡ <b>หมายเหตุ:</b> ตัวเลข FCR estimate ปรับขึ้น +0.10 ตามสภาพไทย · ใช้ทำ scenario planning เท่านั้น · ของจริงต้องวัดหลังจับ</div>
   `;
   document.getElementById('farm-profit').innerHTML = profitHtml;
 }

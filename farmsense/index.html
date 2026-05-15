@@ -131,7 +131,7 @@
     <div class="tab-content" id="tab-feed">
       <h2 class="sec"><span class="num">§ 03</span> อาหารแต่ละเล้า vs เกณฑ์ฟาร์ม</h2>
       <div class="sec-rule"></div>
-      <p class="lede">เทียบ g/ตัว/วัน จริง กับ <b>เกณฑ์อาหารของฟาร์ม</b> (ไฟล์เกณฑ์.xlsx) เป็นหลัก · Ross 308 แสดงเป็นตัวเทียบรอง · เล้า CRITICAL ที่กินน้อย &gt;20% มักเป็นไก่ป่วย</p>
+      <p class="lede">เทียบ g/ตัว/วัน จริง กับ <b>เกณฑ์อาหารของฟาร์ม</b> (ไฟล์เกณฑ์.xlsx) · เล้า CRITICAL ที่กินน้อย &gt;20% มักเป็นไก่ป่วย</p>
 
       <div class="kpi-row" id="feed-kpi"></div>
 
@@ -145,8 +145,8 @@
               <th class="sortable" data-sort="qty">ไก่คงเหลือ</th>
               <th>อาหาร/วัน (kg)</th>
               <th>g/ตัว/วัน</th>
-              <th>เกณฑ์ฟาร์ม (g)<br><small>/ Ross 308</small></th>
-              <th class="sortable" data-sort="dev">ส่วนต่าง<br><small>/ vs Ross</small></th>
+              <th>เกณฑ์ฟาร์ม (g)</th>
+              <th class="sortable" data-sort="dev">ส่วนต่าง</th>
               <th>สถานะ</th>
               <th>คำแนะนำ</th>
             </tr>
@@ -195,20 +195,7 @@
       </div>
 
       <div class="card">
-        <h4>4B · ตารางมาตรฐาน Ross 308</h4>
-        <div class="card-sub">น้ำหนักตัว, อาหาร, FCR ตามอายุ — ใช้เป็น reference</div>
-        <div class="table-wrap">
-          <table id="ross-table">
-            <thead>
-              <tr><th>อายุ (วัน)</th><th>BW (kg)</th><th>อาหาร/วัน (g)</th><th>อาหารสะสม (kg)</th><th>FCR สะสม</th><th>ADG (g/วัน)</th></tr>
-            </thead>
-            <tbody id="ross-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h4>4C · กำไรประมาณการรายฟาร์ม</h4>
+        <h4>4B · กำไรประมาณการรายฟาร์ม</h4>
         <div class="card-sub">สมมติ FCR &amp; น้ำหนักตามฟาร์ม · ใช้เป็น estimate</div>
         <div id="farm-profit"></div>
       </div>
@@ -218,7 +205,7 @@
     <div class="tab-content" id="tab-env">
       <h2 class="sec"><span class="num">§ 05</span> อุณหภูมิ &amp; แรงลม ตามอายุ</h2>
       <div class="sec-rule"></div>
-      <p class="lede">เกณฑ์ของฟาร์ม (ไฟล์เกณฑ์.xlsx) เป็นหลัก — อุณหภูมิเป้า + ความเร็วลมรายวัน · Ross 308 เป็นตัวเทียบรอง</p>
+      <p class="lede">เกณฑ์ของฟาร์ม (ไฟล์เกณฑ์.xlsx) — อุณหภูมิเป้า + ความเร็วลมรายวัน + สัญญาณเตือนตามช่วงอายุ</p>
 
       <div class="card">
         <h4>5A · เกณฑ์อุณหภูมิ &amp; ความเร็วลม รายวัน (เกณฑ์ฟาร์ม)</h4>
@@ -237,7 +224,7 @@
       </div>
 
       <div class="card">
-        <h4>5B · สัญญาณเตือนตามช่วงอายุ <span style="font-size:11px; color:var(--ink-mute); font-weight:400">(อ้างอิง Ross 308 + งานวิจัย)</span></h4>
+        <h4>5B · สัญญาณเตือนตามช่วงอายุ</h4>
         <div class="table-wrap">
           <table id="env-table">
             <thead><tr><th>ช่วงอายุ</th><th>สัญญาณเตือนที่ต้องสังเกต</th></tr></thead>
@@ -317,15 +304,15 @@
 
       <div class="card">
         <h4>7C · น้ำหนักจริง เทียบเกณฑ์ "คละเพศ"</h4>
-        <div class="card-sub">เทียบน้ำหนักชั่งจริงกับ <b>เกณฑ์ STD คละเพศของฟาร์ม</b> (อายุ 1–50 วัน) เป็นหลัก · Ross 308 แสดงเป็นตัวเทียบรอง — ต่ำกว่าเกณฑ์ = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
+        <div class="card-sub">เทียบน้ำหนักชั่งจริงกับ <b>เกณฑ์ STD คละเพศของฟาร์ม</b> (อายุ 1–50 วัน) — ต่ำกว่าเกณฑ์ = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
         <div class="table-wrap">
           <table id="weight-table">
             <thead>
               <tr>
                 <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
                 <th>น.น.จริง (kg)</th>
-                <th>เกณฑ์คละเพศ (kg)<br><small>/ Ross 308</small></th>
-                <th>ส่วนต่าง<br><small>/ vs Ross</small></th>
+                <th>เกณฑ์คละเพศ (kg)</th>
+                <th>ส่วนต่าง</th>
                 <th>สถานะ</th>
               </tr>
             </thead>
