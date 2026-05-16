@@ -1124,6 +1124,88 @@ footer.colophon {
 }
 .chart-demo-legend small { color: var(--ink-mute); font-size: 11px; }
 
+/* ============ 7B · CULL CARDS (Health tab) ============ */
+/* Same visual language as the Daily Overview house-cards so the operator
+   scans 7B the same way: status colour on the left, big numbers in the
+   middle, AM/PM bar at the bottom. */
+.cull-cards {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  margin-top: 6px;
+}
+.cull-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 5px solid var(--ink-mute);
+  border-radius: var(--radius); padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.cull-card.pattern-even  { border-left-color: var(--green); }
+.cull-card.pattern-night {
+  border-left-color: var(--amber);
+  background: linear-gradient(180deg, var(--amber-bg) 0%, var(--surface) 22%);
+}
+.cull-card.pattern-heat  {
+  border-left-color: var(--red);
+  background: linear-gradient(180deg, var(--red-bg) 0%, var(--surface) 22%);
+}
+
+.cull-card .cc-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; flex-wrap: wrap;
+}
+.cull-card .cc-title {
+  display: flex; align-items: center; gap: 8px; font-size: 14px;
+  flex-wrap: wrap;
+}
+.cull-card .cc-emoji { font-size: 16px; line-height: 1; }
+.cull-card .cc-age   { color: var(--ink-mute); font-size: 12px; }
+
+.cull-card .cc-stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+}
+.cull-card .cc-stat {
+  background: var(--surface-2); border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+.cull-card .cc-stat .lab {
+  font-size: 11px; color: var(--ink-mute);
+  font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.cull-card .cc-stat .val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px; font-weight: 700; line-height: 1.1; margin-top: 3px;
+}
+.cull-card .cc-stat.died   .val { color: var(--red); }
+.cull-card .cc-stat.culled .val { color: var(--green); }
+.cull-card .cc-stat .sub { font-size: 10.5px; color: var(--ink-mute); margin-top: 3px; }
+
+.cull-card .cc-ampm {
+  background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px;
+}
+.cull-card .cc-ampm-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; margin-bottom: 6px; font-size: 12px;
+}
+.cull-card .cc-ampm-head .lab { color: var(--ink-soft); font-weight: 600; }
+.cull-card .cc-ampm-bar {
+  display: flex; height: 22px; border-radius: 999px; overflow: hidden;
+  background: var(--surface);
+}
+.cull-card .cc-ampm-bar .seg {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: #fff;
+  padding: 0 8px; white-space: nowrap; overflow: hidden;
+  transition: flex-grow .25s;
+}
+.cull-card .cc-ampm-bar .seg.am { background: var(--blue); }
+.cull-card .cc-ampm-bar .seg.pm { background: var(--amber); }
+
+@media (max-width: 720px) {
+  .cull-cards { grid-template-columns: 1fr; }
+  .cull-card .cc-stats { grid-template-columns: 1fr; }
+}
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 720px) {
   .wrap { padding: 0 16px; }

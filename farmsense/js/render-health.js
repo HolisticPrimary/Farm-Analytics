@@ -80,24 +80,67 @@ function renderHealth(farmKeys) {
   document.getElementById('water-tbody').innerHTML = waterRows ||
     emptyRow(8, 'ไม่มีข้อมูลน้ำ/อาหาร — ไฟล์ Excel อาจไม่มีคอลัมน์ "น้ำ" หรือ "อาหาร/วัน"');
 
-  // ---------- 7B · cull vs died + morning/evening ----------
-  const cullRows = bd
-    .sort((a,b) => b.b.died - a.b.died)
-    .map((x, i) => {
+  // ---------- 7B · cull vs died + morning/evening — card layout ----------
+  // One card per house: big numbers for died/culled, a single segmented
+  // bar for AM vs PM, and a pattern badge ties it all together. Sorted
+  // worst-first so heat-stress / night-pattern houses surface to the top.
+  const PATTERN_RANK = { HEAT: 2, NIGHT: 1, EVEN: 0 };
+  const PATTERN_EMOJI = { HEAT: '🔴', NIGHT: '🟡', EVEN: '🟢' };
+  const cards = bd
+    .sort((a, b) => {
+      const dr = (PATTERN_RANK[b.b.pattern] || 0) - (PATTERN_RANK[a.b.pattern] || 0);
+      if (dr !== 0) return dr;
+      return b.b.died - a.b.died;
+    })
+    .map(x => {
       const { h, b } = x;
-      const rowCls = b.pattern === 'HEAT' ? 'crit' : b.pattern === 'NIGHT' ? 'high' : '';
-      return `<tr class="${rowCls}">
-        <td><b>${i+1}</b></td>
-        <td>${pill(h)}</td>
-        <td class="mono pct-c">${fmtNum(b.died)}</td>
-        <td class="mono">${fmtNum(b.culled)}</td>
-        <td class="mono">${fmtNum(b.morning)}</td>
-        <td class="mono">${fmtNum(b.evening)}</td>
-        <td><span class="pill ${PATTERN_PILL[b.pattern]}">${PATTERN_LABEL[b.pattern]}</span></td>
-      </tr>`;
+      const patternCls = b.pattern === 'HEAT' ? 'pattern-heat'
+                       : b.pattern === 'NIGHT' ? 'pattern-night' : 'pattern-even';
+      const badgePill  = b.pattern === 'HEAT' ? 'crit'
+                       : b.pattern === 'NIGHT' ? 'light' : 'ok';
+      const total = b.morning + b.evening;
+      const amPct = total > 0 ? (b.morning / total) * 100 : 0;
+      const pmPct = total > 0 ? (b.evening / total) * 100 : 0;
+      const farmShort = escapeHtml(h.farmName.replace('ฟาร์ม',''));
+      const farmCls = getFarmClass(h.farmKey, farmKeys);
+      return `
+        <div class="cull-card ${patternCls}">
+          <div class="cc-head">
+            <div class="cc-title">
+              <span class="cc-emoji">${PATTERN_EMOJI[b.pattern]}</span>
+              <span class="pill ${farmCls}">${farmShort}</span>
+              <b>เล้า ${escapeHtml(String(h.house))}</b>
+              ${h.age != null ? `<span class="cc-age">อายุ ${h.age} วัน</span>` : ''}
+            </div>
+            <span class="pill ${badgePill}">${PATTERN_LABEL[b.pattern]}</span>
+          </div>
+          <div class="cc-stats">
+            <div class="cc-stat died">
+              <div class="lab">ตายจริง</div>
+              <div class="val">${fmtNum(b.died)}</div>
+              <div class="sub">สูญเสียคุมไม่ได้</div>
+            </div>
+            <div class="cc-stat culled">
+              <div class="lab">คัด</div>
+              <div class="val">${fmtNum(b.culled)}</div>
+              <div class="sub">จัดการเชิงรุก</div>
+            </div>
+          </div>
+          <div class="cc-ampm">
+            <div class="cc-ampm-head">
+              <span class="lab">รวมสูญเสียวันนี้ · ${fmtNum(total)} ตัว</span>
+            </div>
+            <div class="cc-ampm-bar">
+              <div class="seg am" style="flex-grow:${b.morning}"
+                   title="เช้า ${b.morning}">${b.morning > 0 ? `เช้า ${b.morning} (${amPct.toFixed(0)}%)` : ''}</div>
+              <div class="seg pm" style="flex-grow:${b.evening}"
+                   title="เย็น ${b.evening}">${b.evening > 0 ? `เย็น ${b.evening} (${pmPct.toFixed(0)}%)` : ''}</div>
+            </div>
+          </div>
+        </div>`;
     }).join('');
-  document.getElementById('cull-tbody').innerHTML = cullRows ||
-    emptyRow(7, 'ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"');
+  document.getElementById('cull-cards').innerHTML = cards ||
+    `<div class="insight">ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"</div>`;
 
   // ---------- 7C · actual weight vs mixed-sex standard (Ross 308 secondary) ----------
   const weightRows = wv
