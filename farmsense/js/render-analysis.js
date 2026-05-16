@@ -196,19 +196,19 @@ function chartMortality(daily) {
   else if (cumPct >= 2.5)  { status = 'warn'; badge = '⚠ ใกล้เกณฑ์'; }
   else                     { status = 'good'; badge = '✓ ปกติ'; }
 
-  // Find top spike day
-  const avg = losses.reduce((s,v)=>s+v,0) / Math.max(1, losses.length);
-  let spike = null;
-  daily.forEach(d => {
-    if ((d.total_loss||0) >= 30 && (d.total_loss||0) >= avg * 2 &&
-        (!spike || (d.total_loss||0) > (spike.total_loss||0))) spike = d;
-  });
-
   const maxLoss = Math.max(10, ...losses);
-  const scales = makeScales(days, 0, maxLoss * 1.20);
+  // Reserve extra headroom (35%) so the per-bar value labels sit clear of
+  // the top axis line.
+  const scales = makeScales(days, 0, maxLoss * 1.35);
   const w = Math.max(4, (scales.area.x1 - scales.area.x0) / daily.length * 0.78);
-  const bars = daily.map(d => {
+
+  // Build bars + per-bar value labels in the same pass — label colour
+  // matches the bar's threshold zone so the eye groups them together.
+  const bars = [];
+  const labels = [];
+  daily.forEach(d => {
     const v = d.total_loss || 0;
+    if (v === 0) return;
     const x = scales.px(d.day);
     const y = scales.py(v);
     const h = scales.area.y1 - y;
@@ -217,33 +217,25 @@ function chartMortality(daily) {
     if (pct >= MORTALITY_THRESHOLDS.dailyPct)        fill = COL.red;
     else if (pct >= MORTALITY_THRESHOLDS.warnDailyPct) fill = COL.amber;
     else                                              fill = COL.greenSoft;
-    return `<rect x="${x - w/2}" y="${y}" width="${w}" height="${h}" fill="${fill}" rx="1.5" opacity="0.92"/>`;
-  }).join('');
-
-  // Annotate top spike
-  let annotation = '';
-  if (spike) {
-    const x = scales.px(spike.day);
-    const y = scales.py(spike.total_loss);
-    annotation = `
-      <text x="${x}" y="${y - 6}" text-anchor="middle"
-            font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="${COL.red}">
-        ${spike.total_loss}
-      </text>`;
-  }
+    bars.push(`<rect x="${x - w/2}" y="${y}" width="${w}" height="${h}" fill="${fill}" rx="1.5" opacity="0.92"/>`);
+    // Label text colour: darker shade of the bar, with a thin white
+    // stroke so it stays readable when bars sit close together.
+    const labelColor = pct >= MORTALITY_THRESHOLDS.dailyPct ? COL.red
+                     : pct >= MORTALITY_THRESHOLDS.warnDailyPct ? COL.amber
+                     : COL.green;
+    labels.push(`<text x="${x}" y="${y - 3}" text-anchor="middle"
+                       font-family="JetBrains Mono, monospace" font-size="8.5" font-weight="700"
+                       fill="${labelColor}" stroke="#ffffff" stroke-width="2.2" paint-order="stroke"
+                       style="pointer-events:none">${v}</text>`);
+  });
 
   const yTicks = niceTicks(0, scales.yMax, 3);
   const axes = drawAxes(scales, yTicks, pickXTicks(days));
 
-  const takeaway = spike
-    ? `วัน spike สูงสุด: <b>Day ${spike.day}</b> สูญเสีย ${spike.total_loss} ตัว (${(spike.total_loss/avg).toFixed(1)}× เฉลี่ย)`
-    : `ไม่มี spike ผิดปกติ — สูญเสียกระจายสม่ำเสมอ เฉลี่ย ${avg.toFixed(0)} ตัว/วัน`;
-
-  return svgFrame('📉 ตายรายวัน', `${axes}${bars}${annotation}`, {
+  return svgFrame('📉 ตายรายวัน', `${axes}${bars.join('')}${labels.join('')}`, {
     status, badge,
     headline: `${cumPct.toFixed(2)}<small>% สะสม</small> · <span class="num-secondary">${last.total_loss || 0} ตัว</span><small> วันล่าสุด</small>`,
     subtitle: `แท่งสีตามเกณฑ์รายวัน · 🟢&lt;0.07% · 🟡 0.07-0.10% · 🔴≥0.10%`,
-    takeaway,
   });
 }
 
