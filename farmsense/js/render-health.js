@@ -132,9 +132,9 @@ function renderHealth(farmKeys) {
             </div>
             <div class="cc-ampm-bar">
               <div class="seg am" style="flex-grow:${b.morning}"
-                   title="เช้า ${b.morning}">${b.morning > 0 ? `เช้า ${b.morning} (${amPct.toFixed(0)}%)` : ''}</div>
+                   title="เช้า ${b.morning}">${b.morning > 0 ? `เช้า ${b.morning}` : ''}</div>
               <div class="seg pm" style="flex-grow:${b.evening}"
-                   title="เย็น ${b.evening}">${b.evening > 0 ? `เย็น ${b.evening} (${pmPct.toFixed(0)}%)` : ''}</div>
+                   title="เย็น ${b.evening}">${b.evening > 0 ? `เย็น ${b.evening}` : ''}</div>
             </div>
           </div>
         </div>`;
