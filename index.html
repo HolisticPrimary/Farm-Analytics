@@ -1140,6 +1140,60 @@ footer.colophon {
 }
 .chart-demo-legend small { color: var(--ink-mute); font-size: 11px; }
 
+/* ============ 7C · WEEKLY WEIGHT / ADG / FCR CARDS ============ */
+.wk-cards {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
+  margin-top: 6px;
+}
+.wk-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-left: 5px solid var(--ink-mute);
+  border-radius: var(--radius); padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+.wk-card.card-good { border-left-color: var(--green); }
+.wk-card.card-warn {
+  border-left-color: var(--amber);
+  background: linear-gradient(180deg, var(--amber-bg) 0%, var(--surface) 22%);
+}
+.wk-card.card-bad {
+  border-left-color: var(--red);
+  background: linear-gradient(180deg, var(--red-bg) 0%, var(--surface) 22%);
+}
+.wk-card .wk-head {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.wk-card .wk-title {
+  display: flex; align-items: center; gap: 8px; font-size: 14px;
+  flex-wrap: wrap;
+}
+.wk-card .wk-age { color: var(--ink-mute); font-size: 11.5px; }
+.wk-card .wk-table-wrap { overflow-x: auto; }
+.wk-card .wk-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 12px;
+}
+.wk-card .wk-table th {
+  text-align: left; padding: 6px 8px;
+  font-size: 10.5px; font-weight: 600; color: var(--ink-mute);
+  letter-spacing: 0.03em; text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.wk-card .wk-table td {
+  padding: 7px 8px; border-bottom: 1px solid var(--surface-2);
+  white-space: nowrap;
+}
+.wk-card .wk-table tr:last-child td { border-bottom: none; }
+.wk-card .wk-table small { font-size: 10.5px; margin-left: 2px; }
+
+@media (max-width: 720px) {
+  .wk-cards { grid-template-columns: 1fr; }
+  .wk-card .wk-table { font-size: 11px; }
+}
+
 /* ============ 7B · CULL CARDS (Health tab) ============ */
 /* Same visual language as the Daily Overview house-cards so the operator
    scans 7B the same way: status colour on the left, big numbers in the
@@ -1509,23 +1563,9 @@ footer.colophon {
       </div>
 
       <div class="card">
-        <h4>7C · น้ำหนักจริง เทียบ <b>4.5× น้ำหนักแรกเข้า</b></h4>
-        <div class="card-sub">เกณฑ์ของฟาร์ม: น้ำหนักทุกครั้งที่ชั่งต้องเป็น <b>≥ 4.5 เท่า ของน้ำหนักลูกไก่ตอนลง</b> · ต่ำกว่า = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
-        <div class="table-wrap">
-          <table id="weight-table">
-            <thead>
-              <tr>
-                <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
-                <th>น.น.จริง (kg)</th>
-                <th>แรกเข้า (g)</th>
-                <th>เกณฑ์ 4.5× (kg)</th>
-                <th>เท่าของแรกเข้า</th>
-                <th>สถานะ</th>
-              </tr>
-            </thead>
-            <tbody id="weight-tbody"></tbody>
-          </table>
-        </div>
+        <h4>7C · น้ำหนัก / ADG / FCR รายสัปดาห์ <small style="font-size:11px; color:var(--ink-mute); font-weight:400">· เทียบ Ross 308 คละเพศ + กฎ ≥ 4.5× แรกเข้า</small></h4>
+        <div class="card-sub">ทุกครั้งที่ชั่ง (สัปดาห์) เทียบ <b>ADG จริง</b> กับ Ross 308 ในช่วงเดียวกัน + <b>FCR สะสม</b> กับ Ross 308 · เกณฑ์ฟาร์ม: น้ำหนักต้อง ≥ 4.5× แรกเข้าทุกครั้ง</div>
+        <div id="weight-cards" class="wk-cards"></div>
       </div>
 
       <div class="card">
@@ -2156,6 +2196,83 @@ function farmAvgMortality(farm) {
 function farmAvgAge(farm) {
   const ages = farm.houses.map(h => h.age).filter(a => a != null);
   return ages.length > 0 ? ages.reduce((s,a)=>s+a,0) / ages.length : 0;
+}
+
+// Build the per-week weight/ADG/FCR breakdown the 7C card consumes.
+//
+// The H-sheet records weight only on weighing days (typically D7, D14,
+// D21, D28, …). For each such day we compute:
+//   - actual weight in kg
+//   - ADG since the previous weighing (g/bird/day)
+//   - ROSS 308 ADG for the same interval, derived from the BW table so
+//     we compare period growth rates, not the table's snapshot ADG
+//   - actual cumulative FCR (the H-sheet column, kept as-is)
+//   - ROSS 308 cumulative FCR at the same age
+//   - status flags for ADG and FCR vs Ross (within ±10 % = good)
+//   - ratio vs the initial chick weight (for the 4.5× rule)
+// Returns null when no weighings exist or daily history is missing.
+function weeklyWeightAnalysis(h) {
+  if (!h.dailyHistory || h.dailyHistory.length === 0) return null;
+  const initial = (h.wt_initial && h.wt_initial > 0) ? h.wt_initial : 0.040;
+  const weighings = h.dailyHistory.filter(d => d.weight != null && d.weight > 0);
+  if (weighings.length === 0) return null;
+
+  const rows = [];
+  let prevDay = 0;
+  let prevWeight = initial;
+  for (const w of weighings) {
+    const interval = w.day - prevDay;
+    const adgActual = interval > 0 ? ((w.weight - prevWeight) * 1000) / interval : 0;
+
+    // ROSS 308 expected gain over the SAME period (prevDay → w.day) so
+    // the comparison is apples-to-apples. Falls back to the table's
+    // snapshot adg field at w.day when prevDay is 0 (placement).
+    let adgRoss = null;
+    const rNow = rossLookup(w.day);
+    const rPrev = prevDay > 0 ? rossLookup(prevDay) : null;
+    if (rNow && interval > 0) {
+      if (rPrev) adgRoss = ((rNow.bw - rPrev.bw) * 1000) / interval;
+      else       adgRoss = ((rNow.bw - initial) * 1000) / w.day;
+    }
+    const adgDiffPct = (adgActual != null && adgRoss) ? ((adgActual - adgRoss) / adgRoss) * 100 : null;
+
+    const fcrActual = (w.fcr != null && w.fcr > 0) ? w.fcr : null;
+    const fcrRoss   = rNow ? rNow.fcr : null;
+    const fcrDiffPct = (fcrActual != null && fcrRoss) ? ((fcrActual - fcrRoss) / fcrRoss) * 100 : null;
+
+    rows.push({
+      day: w.day,
+      weight: w.weight,
+      ratioVsInitial: w.weight / initial,
+      adgActual,
+      adgRoss,
+      adgDiffPct,
+      adgStatus: adgDiffPct == null ? null
+                : adgDiffPct < -10 ? 'SLOW'
+                : adgDiffPct >  10 ? 'FAST' : 'ON',
+      fcrActual,
+      fcrRoss,
+      fcrDiffPct,
+      // Lower FCR is better, so "above Ross" is the worry.
+      fcrStatus: fcrDiffPct == null ? null
+                : fcrDiffPct >  10 ? 'POOR'
+                : fcrDiffPct < -10 ? 'GREAT' : 'ON',
+    });
+    prevDay = w.day;
+    prevWeight = w.weight;
+  }
+
+  // Overall card status: red if any weighing dips below the 4.5× rule,
+  // amber if any weighing's ADG runs >10% under Ross, else green.
+  const anyBelowRule = rows.some(r => r.ratioVsInitial < 4.5);
+  const anySlowAdg   = rows.some(r => r.adgStatus === 'SLOW');
+  const anyPoorFcr   = rows.some(r => r.fcrStatus === 'POOR');
+  let overall;
+  if (anyBelowRule)                  overall = 'BAD';
+  else if (anySlowAdg || anyPoorFcr) overall = 'WARN';
+  else                               overall = 'GOOD';
+
+  return { initial, rows, overall };
 }
 
 // ========== GROUP A · health & growth analyzers ==========
@@ -3977,28 +4094,82 @@ function renderHealth(farmKeys) {
   document.getElementById('cull-cards').innerHTML = cards ||
     `<div class="insight">ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"</div>`;
 
-  // ---------- 7C · actual weight vs initial × 4.5 ----------
-  // Each row shows: actual / initial (placement) / 4.5× threshold /
-  // multiplier achieved / pass-fail badge.
-  const weightRows = wv
-    .sort((a, b) => a.w.ratio - b.w.ratio)
-    .map((x, i) => {
-      const { h, w } = x;
-      const rowCls = w.status === 'BELOW' ? 'crit' : '';
-      const ratioCls = w.status === 'BELOW' ? 'pct-c' : 'pct-o';
-      return `<tr class="${rowCls}">
-        <td><b>${i+1}</b></td>
-        <td>${pill(h)}</td>
-        <td class="mono">${h.age != null ? h.age : '–'}</td>
-        <td class="mono">${w.actual.toFixed(3)}</td>
-        <td class="mono">${(w.initial * 1000).toFixed(0)}</td>
-        <td class="mono">${w.threshold.toFixed(3)}</td>
-        <td class="pct ${ratioCls}">${w.ratio.toFixed(2)}×</td>
-        <td><span class="pill ${WEIGHT_PILL[w.status]}">${WEIGHT_LABEL[w.status]}</span></td>
+  // ---------- 7C · weekly weight / ADG / FCR vs Ross 308 ----------
+  // One card per house, sorted by overall status (worst first). Each card
+  // contains a small table of weighing days with ADG and FCR compared
+  // against the Ross 308 mixed-sex reference, plus the "≥ 4.5×" rule
+  // badge in the header.
+  const WW_RANK = { BAD: 2, WARN: 1, GOOD: 0 };
+  const WW_BADGE = {
+    BAD:  { cls: 'crit',  text: '🚨 ต่ำกว่าเกณฑ์' },
+    WARN: { cls: 'light', text: '⚠ ต้องเฝ้าระวัง' },
+    GOOD: { cls: 'ok',    text: '✓ ตามเกณฑ์' },
+  };
+  const wkData = allHouses
+    .map(h => ({ h, w: weeklyWeightAnalysis(h) }))
+    .filter(x => x.w);
+  wkData.sort((a, b) => (WW_RANK[b.w.overall] || 0) - (WW_RANK[a.w.overall] || 0));
+
+  const wkCards = wkData.map(({ h, w }) => {
+    const farmShort = escapeHtml(h.farmName.replace('ฟาร์ม',''));
+    const farmCls = getFarmClass(h.farmKey, farmKeys);
+    const cardCls = w.overall === 'BAD' ? 'card-bad'
+                  : w.overall === 'WARN' ? 'card-warn' : 'card-good';
+    const badge = WW_BADGE[w.overall];
+    const rowsHtml = w.rows.map(r => {
+      const adgCellCls = r.adgStatus === 'SLOW' ? 'pct-c'
+                      : r.adgStatus === 'FAST' ? 'pct-o' : 'pct-w';
+      const fcrCellCls = r.fcrStatus === 'POOR'  ? 'pct-c'
+                      : r.fcrStatus === 'GREAT' ? 'pct-o' : 'pct-w';
+      const ratioCls  = r.ratioVsInitial < 4.5 ? 'pct-c' : 'pct-o';
+      const adgRossStr = r.adgRoss != null ? r.adgRoss.toFixed(0) : '–';
+      const fcrActualStr = r.fcrActual != null ? r.fcrActual.toFixed(2) : '–';
+      const fcrRossStr = r.fcrRoss != null ? r.fcrRoss.toFixed(2) : '–';
+      const adgDiff = r.adgDiffPct != null
+        ? `<small style="color:var(--ink-mute)">(${r.adgDiffPct >= 0 ? '+' : ''}${r.adgDiffPct.toFixed(0)}%)</small>`
+        : '';
+      const fcrDiff = r.fcrDiffPct != null
+        ? `<small style="color:var(--ink-mute)">(${r.fcrDiffPct >= 0 ? '+' : ''}${r.fcrDiffPct.toFixed(0)}%)</small>`
+        : '';
+      return `<tr>
+        <td class="mono"><b>Day ${r.day}</b></td>
+        <td class="mono">${r.weight.toFixed(3)}</td>
+        <td class="mono ${ratioCls}">${r.ratioVsInitial.toFixed(1)}×</td>
+        <td class="mono ${adgCellCls}"><b>${r.adgActual.toFixed(0)}</b> ${adgDiff}</td>
+        <td class="mono">${adgRossStr} g/d</td>
+        <td class="mono ${fcrCellCls}"><b>${fcrActualStr}</b> ${fcrDiff}</td>
+        <td class="mono">${fcrRossStr}</td>
       </tr>`;
     }).join('');
-  document.getElementById('weight-tbody').innerHTML = weightRows ||
-    emptyRow(8, 'ไม่มีข้อมูลน้ำหนัก — ไฟล์ Excel อาจไม่มีคอลัมน์ "น.น.ตามอายุ" หรือ "อายุ"');
+    return `
+      <div class="wk-card ${cardCls}">
+        <div class="wk-head">
+          <div class="wk-title">
+            <span class="pill ${farmCls}">${farmShort}</span>
+            <b>เล้า ${escapeHtml(String(h.house))}</b>
+            <span class="wk-age">อายุ ${h.age != null ? h.age : '–'} วัน · แรกเข้า ${(w.initial * 1000).toFixed(0)} ก.</span>
+          </div>
+          <span class="pill ${badge.cls}">${badge.text}</span>
+        </div>
+        <div class="wk-table-wrap">
+          <table class="wk-table">
+            <thead><tr>
+              <th>วันที่ชั่ง</th>
+              <th>น.น.จริง (kg)</th>
+              <th>× ของแรกเข้า</th>
+              <th>ADG จริง</th>
+              <th>ADG Ross</th>
+              <th>FCR จริง</th>
+              <th>FCR Ross</th>
+            </tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('weight-cards').innerHTML = wkCards ||
+    `<div class="insight">ไม่มีข้อมูลการชั่งน้ำหนักรายสัปดาห์ — ใบหน้าเล้าต้องมี H 1...H N กรอกน้ำหนัก + FCR</div>`;
 
   // ---------- 7D · feed loaded vs eaten ----------
   const waste = allHouses.map(h => ({ h, f: feedWaste(h) })).filter(x => x.f);

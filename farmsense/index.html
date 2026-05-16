@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20260516h">
+<link rel="stylesheet" href="css/styles.css?v=20260516i">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -270,23 +270,9 @@
       </div>
 
       <div class="card">
-        <h4>7C · น้ำหนักจริง เทียบ <b>4.5× น้ำหนักแรกเข้า</b></h4>
-        <div class="card-sub">เกณฑ์ของฟาร์ม: น้ำหนักทุกครั้งที่ชั่งต้องเป็น <b>≥ 4.5 เท่า ของน้ำหนักลูกไก่ตอนลง</b> · ต่ำกว่า = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
-        <div class="table-wrap">
-          <table id="weight-table">
-            <thead>
-              <tr>
-                <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
-                <th>น.น.จริง (kg)</th>
-                <th>แรกเข้า (g)</th>
-                <th>เกณฑ์ 4.5× (kg)</th>
-                <th>เท่าของแรกเข้า</th>
-                <th>สถานะ</th>
-              </tr>
-            </thead>
-            <tbody id="weight-tbody"></tbody>
-          </table>
-        </div>
+        <h4>7C · น้ำหนัก / ADG / FCR รายสัปดาห์ <small style="font-size:11px; color:var(--ink-mute); font-weight:400">· เทียบ Ross 308 คละเพศ + กฎ ≥ 4.5× แรกเข้า</small></h4>
+        <div class="card-sub">ทุกครั้งที่ชั่ง (สัปดาห์) เทียบ <b>ADG จริง</b> กับ Ross 308 ในช่วงเดียวกัน + <b>FCR สะสม</b> กับ Ross 308 · เกณฑ์ฟาร์ม: น้ำหนักต้อง ≥ 4.5× แรกเข้าทุกครั้ง</div>
+        <div id="weight-cards" class="wk-cards"></div>
       </div>
 
       <div class="card">
@@ -453,22 +439,22 @@
 </main>
 
 <!-- ====== Application scripts (load order matters) ====== -->
-<script src="js/constants.js?v=20260516h"></script>
-<script src="js/state.js?v=20260516h"></script>
-<script src="js/ui-helpers.js?v=20260516h"></script>
-<script src="js/analyzers.js?v=20260516h"></script>
-<script src="js/analyzers-alerts.js?v=20260516h"></script>
-<script src="js/schema-map.js?v=20260516h"></script>
-<script src="js/history.js?v=20260516h"></script>
-<script src="js/parser.js?v=20260516h"></script>
-<script src="js/render.js?v=20260516h"></script>
-<script src="js/render-health.js?v=20260516h"></script>
-<script src="js/render-alerts.js?v=20260516h"></script>
-<script src="js/render-analysis.js?v=20260516h"></script>
-<script src="js/render-history.js?v=20260516h"></script>
-<script src="js/sync-sheets.js?v=20260516h"></script>
-<script src="js/exports.js?v=20260516h"></script>
-<script src="js/main.js?v=20260516h"></script>
+<script src="js/constants.js?v=20260516i"></script>
+<script src="js/state.js?v=20260516i"></script>
+<script src="js/ui-helpers.js?v=20260516i"></script>
+<script src="js/analyzers.js?v=20260516i"></script>
+<script src="js/analyzers-alerts.js?v=20260516i"></script>
+<script src="js/schema-map.js?v=20260516i"></script>
+<script src="js/history.js?v=20260516i"></script>
+<script src="js/parser.js?v=20260516i"></script>
+<script src="js/render.js?v=20260516i"></script>
+<script src="js/render-health.js?v=20260516i"></script>
+<script src="js/render-alerts.js?v=20260516i"></script>
+<script src="js/render-analysis.js?v=20260516i"></script>
+<script src="js/render-history.js?v=20260516i"></script>
+<script src="js/sync-sheets.js?v=20260516i"></script>
+<script src="js/exports.js?v=20260516i"></script>
+<script src="js/main.js?v=20260516i"></script>
 
 </body>
 </html>

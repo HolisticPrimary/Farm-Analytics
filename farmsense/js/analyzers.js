@@ -146,6 +146,83 @@ function farmAvgAge(farm) {
   return ages.length > 0 ? ages.reduce((s,a)=>s+a,0) / ages.length : 0;
 }
 
+// Build the per-week weight/ADG/FCR breakdown the 7C card consumes.
+//
+// The H-sheet records weight only on weighing days (typically D7, D14,
+// D21, D28, …). For each such day we compute:
+//   - actual weight in kg
+//   - ADG since the previous weighing (g/bird/day)
+//   - ROSS 308 ADG for the same interval, derived from the BW table so
+//     we compare period growth rates, not the table's snapshot ADG
+//   - actual cumulative FCR (the H-sheet column, kept as-is)
+//   - ROSS 308 cumulative FCR at the same age
+//   - status flags for ADG and FCR vs Ross (within ±10 % = good)
+//   - ratio vs the initial chick weight (for the 4.5× rule)
+// Returns null when no weighings exist or daily history is missing.
+function weeklyWeightAnalysis(h) {
+  if (!h.dailyHistory || h.dailyHistory.length === 0) return null;
+  const initial = (h.wt_initial && h.wt_initial > 0) ? h.wt_initial : 0.040;
+  const weighings = h.dailyHistory.filter(d => d.weight != null && d.weight > 0);
+  if (weighings.length === 0) return null;
+
+  const rows = [];
+  let prevDay = 0;
+  let prevWeight = initial;
+  for (const w of weighings) {
+    const interval = w.day - prevDay;
+    const adgActual = interval > 0 ? ((w.weight - prevWeight) * 1000) / interval : 0;
+
+    // ROSS 308 expected gain over the SAME period (prevDay → w.day) so
+    // the comparison is apples-to-apples. Falls back to the table's
+    // snapshot adg field at w.day when prevDay is 0 (placement).
+    let adgRoss = null;
+    const rNow = rossLookup(w.day);
+    const rPrev = prevDay > 0 ? rossLookup(prevDay) : null;
+    if (rNow && interval > 0) {
+      if (rPrev) adgRoss = ((rNow.bw - rPrev.bw) * 1000) / interval;
+      else       adgRoss = ((rNow.bw - initial) * 1000) / w.day;
+    }
+    const adgDiffPct = (adgActual != null && adgRoss) ? ((adgActual - adgRoss) / adgRoss) * 100 : null;
+
+    const fcrActual = (w.fcr != null && w.fcr > 0) ? w.fcr : null;
+    const fcrRoss   = rNow ? rNow.fcr : null;
+    const fcrDiffPct = (fcrActual != null && fcrRoss) ? ((fcrActual - fcrRoss) / fcrRoss) * 100 : null;
+
+    rows.push({
+      day: w.day,
+      weight: w.weight,
+      ratioVsInitial: w.weight / initial,
+      adgActual,
+      adgRoss,
+      adgDiffPct,
+      adgStatus: adgDiffPct == null ? null
+                : adgDiffPct < -10 ? 'SLOW'
+                : adgDiffPct >  10 ? 'FAST' : 'ON',
+      fcrActual,
+      fcrRoss,
+      fcrDiffPct,
+      // Lower FCR is better, so "above Ross" is the worry.
+      fcrStatus: fcrDiffPct == null ? null
+                : fcrDiffPct >  10 ? 'POOR'
+                : fcrDiffPct < -10 ? 'GREAT' : 'ON',
+    });
+    prevDay = w.day;
+    prevWeight = w.weight;
+  }
+
+  // Overall card status: red if any weighing dips below the 4.5× rule,
+  // amber if any weighing's ADG runs >10% under Ross, else green.
+  const anyBelowRule = rows.some(r => r.ratioVsInitial < 4.5);
+  const anySlowAdg   = rows.some(r => r.adgStatus === 'SLOW');
+  const anyPoorFcr   = rows.some(r => r.fcrStatus === 'POOR');
+  let overall;
+  if (anyBelowRule)                  overall = 'BAD';
+  else if (anySlowAdg || anyPoorFcr) overall = 'WARN';
+  else                               overall = 'GOOD';
+
+  return { initial, rows, overall };
+}
+
 // ========== GROUP A · health & growth analyzers ==========
 
 // Water-to-feed ratio (liters water : kg feed). Broiler norm ≈ 1.5–2.4.

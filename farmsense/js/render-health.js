@@ -142,28 +142,82 @@ function renderHealth(farmKeys) {
   document.getElementById('cull-cards').innerHTML = cards ||
     `<div class="insight">ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"</div>`;
 
-  // ---------- 7C · actual weight vs initial × 4.5 ----------
-  // Each row shows: actual / initial (placement) / 4.5× threshold /
-  // multiplier achieved / pass-fail badge.
-  const weightRows = wv
-    .sort((a, b) => a.w.ratio - b.w.ratio)
-    .map((x, i) => {
-      const { h, w } = x;
-      const rowCls = w.status === 'BELOW' ? 'crit' : '';
-      const ratioCls = w.status === 'BELOW' ? 'pct-c' : 'pct-o';
-      return `<tr class="${rowCls}">
-        <td><b>${i+1}</b></td>
-        <td>${pill(h)}</td>
-        <td class="mono">${h.age != null ? h.age : '–'}</td>
-        <td class="mono">${w.actual.toFixed(3)}</td>
-        <td class="mono">${(w.initial * 1000).toFixed(0)}</td>
-        <td class="mono">${w.threshold.toFixed(3)}</td>
-        <td class="pct ${ratioCls}">${w.ratio.toFixed(2)}×</td>
-        <td><span class="pill ${WEIGHT_PILL[w.status]}">${WEIGHT_LABEL[w.status]}</span></td>
+  // ---------- 7C · weekly weight / ADG / FCR vs Ross 308 ----------
+  // One card per house, sorted by overall status (worst first). Each card
+  // contains a small table of weighing days with ADG and FCR compared
+  // against the Ross 308 mixed-sex reference, plus the "≥ 4.5×" rule
+  // badge in the header.
+  const WW_RANK = { BAD: 2, WARN: 1, GOOD: 0 };
+  const WW_BADGE = {
+    BAD:  { cls: 'crit',  text: '🚨 ต่ำกว่าเกณฑ์' },
+    WARN: { cls: 'light', text: '⚠ ต้องเฝ้าระวัง' },
+    GOOD: { cls: 'ok',    text: '✓ ตามเกณฑ์' },
+  };
+  const wkData = allHouses
+    .map(h => ({ h, w: weeklyWeightAnalysis(h) }))
+    .filter(x => x.w);
+  wkData.sort((a, b) => (WW_RANK[b.w.overall] || 0) - (WW_RANK[a.w.overall] || 0));
+
+  const wkCards = wkData.map(({ h, w }) => {
+    const farmShort = escapeHtml(h.farmName.replace('ฟาร์ม',''));
+    const farmCls = getFarmClass(h.farmKey, farmKeys);
+    const cardCls = w.overall === 'BAD' ? 'card-bad'
+                  : w.overall === 'WARN' ? 'card-warn' : 'card-good';
+    const badge = WW_BADGE[w.overall];
+    const rowsHtml = w.rows.map(r => {
+      const adgCellCls = r.adgStatus === 'SLOW' ? 'pct-c'
+                      : r.adgStatus === 'FAST' ? 'pct-o' : 'pct-w';
+      const fcrCellCls = r.fcrStatus === 'POOR'  ? 'pct-c'
+                      : r.fcrStatus === 'GREAT' ? 'pct-o' : 'pct-w';
+      const ratioCls  = r.ratioVsInitial < 4.5 ? 'pct-c' : 'pct-o';
+      const adgRossStr = r.adgRoss != null ? r.adgRoss.toFixed(0) : '–';
+      const fcrActualStr = r.fcrActual != null ? r.fcrActual.toFixed(2) : '–';
+      const fcrRossStr = r.fcrRoss != null ? r.fcrRoss.toFixed(2) : '–';
+      const adgDiff = r.adgDiffPct != null
+        ? `<small style="color:var(--ink-mute)">(${r.adgDiffPct >= 0 ? '+' : ''}${r.adgDiffPct.toFixed(0)}%)</small>`
+        : '';
+      const fcrDiff = r.fcrDiffPct != null
+        ? `<small style="color:var(--ink-mute)">(${r.fcrDiffPct >= 0 ? '+' : ''}${r.fcrDiffPct.toFixed(0)}%)</small>`
+        : '';
+      return `<tr>
+        <td class="mono"><b>Day ${r.day}</b></td>
+        <td class="mono">${r.weight.toFixed(3)}</td>
+        <td class="mono ${ratioCls}">${r.ratioVsInitial.toFixed(1)}×</td>
+        <td class="mono ${adgCellCls}"><b>${r.adgActual.toFixed(0)}</b> ${adgDiff}</td>
+        <td class="mono">${adgRossStr} g/d</td>
+        <td class="mono ${fcrCellCls}"><b>${fcrActualStr}</b> ${fcrDiff}</td>
+        <td class="mono">${fcrRossStr}</td>
       </tr>`;
     }).join('');
-  document.getElementById('weight-tbody').innerHTML = weightRows ||
-    emptyRow(8, 'ไม่มีข้อมูลน้ำหนัก — ไฟล์ Excel อาจไม่มีคอลัมน์ "น.น.ตามอายุ" หรือ "อายุ"');
+    return `
+      <div class="wk-card ${cardCls}">
+        <div class="wk-head">
+          <div class="wk-title">
+            <span class="pill ${farmCls}">${farmShort}</span>
+            <b>เล้า ${escapeHtml(String(h.house))}</b>
+            <span class="wk-age">อายุ ${h.age != null ? h.age : '–'} วัน · แรกเข้า ${(w.initial * 1000).toFixed(0)} ก.</span>
+          </div>
+          <span class="pill ${badge.cls}">${badge.text}</span>
+        </div>
+        <div class="wk-table-wrap">
+          <table class="wk-table">
+            <thead><tr>
+              <th>วันที่ชั่ง</th>
+              <th>น.น.จริง (kg)</th>
+              <th>× ของแรกเข้า</th>
+              <th>ADG จริง</th>
+              <th>ADG Ross</th>
+              <th>FCR จริง</th>
+              <th>FCR Ross</th>
+            </tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('weight-cards').innerHTML = wkCards ||
+    `<div class="insight">ไม่มีข้อมูลการชั่งน้ำหนักรายสัปดาห์ — ใบหน้าเล้าต้องมี H 1...H N กรอกน้ำหนัก + FCR</div>`;
 
   // ---------- 7D · feed loaded vs eaten ----------
   const waste = allHouses.map(h => ({ h, f: feedWaste(h) })).filter(x => x.f);
