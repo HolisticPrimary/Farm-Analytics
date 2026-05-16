@@ -459,7 +459,7 @@ ${body}
   } else {
     setTimeout(() => window.print(), 800);
   }
-</script>
+<\/script>
 </body></html>`;
   win.document.open();
   win.document.write(printDoc);
