@@ -1481,7 +1481,7 @@ footer.colophon {
     <div class="tab-content" id="tab-health">
       <h2 class="sec"><span class="num">§ 07</span> สุขภาพรายวัน &amp; การเติบโต</h2>
       <div class="sec-rule"></div>
-      <p class="lede">ข้อมูลที่ดึงเพิ่มจากใบหน้าเล้า — น้ำ:อาหาร, แยกตายจริง/คัด, รูปแบบเช้า/เย็น, น้ำหนักจริงเทียบเกณฑ์คละเพศ, อาหารหก/สูญเปล่า</p>
+      <p class="lede">ข้อมูลที่ดึงเพิ่มจากใบหน้าเล้า — น้ำ:อาหาร, แยกตายจริง/คัด, รูปแบบเช้า/เย็น, น้ำหนักจริงเทียบเกณฑ์ 4.5× ของแรกเข้า, อาหารหก/สูญเปล่า</p>
 
       <div class="kpi-row" id="health-kpi"></div>
 
@@ -1509,16 +1509,17 @@ footer.colophon {
       </div>
 
       <div class="card">
-        <h4>7C · น้ำหนักจริง เทียบเกณฑ์ "คละเพศ"</h4>
-        <div class="card-sub">เทียบน้ำหนักชั่งจริงกับ <b>เกณฑ์ STD คละเพศของฟาร์ม</b> (อายุ 1–50 วัน) — ต่ำกว่าเกณฑ์ = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
+        <h4>7C · น้ำหนักจริง เทียบ <b>4.5× น้ำหนักแรกเข้า</b></h4>
+        <div class="card-sub">เกณฑ์ของฟาร์ม: น้ำหนักทุกครั้งที่ชั่งต้องเป็น <b>≥ 4.5 เท่า ของน้ำหนักลูกไก่ตอนลง</b> · ต่ำกว่า = โตช้า ต้องเช็คอาหาร/สุขภาพ</div>
         <div class="table-wrap">
           <table id="weight-table">
             <thead>
               <tr>
                 <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
                 <th>น.น.จริง (kg)</th>
-                <th>เกณฑ์คละเพศ (kg)</th>
-                <th>ส่วนต่าง</th>
+                <th>แรกเข้า (g)</th>
+                <th>เกณฑ์ 4.5× (kg)</th>
+                <th>เท่าของแรกเข้า</th>
                 <th>สถานะ</th>
               </tr>
             </thead>
@@ -1945,6 +1946,7 @@ const COL_KEYWORDS = {
   feed_day:        ['อาหาร/วัน', 'อาหารต่อวัน', 'อาหาร'],
   water:           ['น้ำ/ลิตร', 'น้ำ-ลิตร', 'น้ำ'],
   wt_age:          ['น.น.ตามอายุ', 'น้ำหนักตามอายุ', 'ตามอายุ'],
+  wt_initial:      ['น้ำหนักลูกไก่', 'น.น แรกเข้า', 'น.น.แรกเข้า', 'น้ำหนักแรกเข้า'],
   catch_date:      ['กำหนดจับ'],
   wt_target:       ['น.น.วันจับ', 'น.น.จับ'],
   wt_actual:       ['น.น.จับจริง', 'น้ำหนักจับจริง'],
@@ -1963,7 +1965,7 @@ const COL_EXCLUDE = {
 const COL_NUMERIC = [
   'qty_in', 'density', 'death_day', 'death_cum', 'pct_cum', 'disabled',
   'qty_rem', 'feed_loaded_pct', 'feed_pct', 'feed_day', 'water',
-  'wt_age', 'wt_actual',
+  'wt_age', 'wt_initial', 'wt_actual',
 ];
 
 // ===== js/state.js =====
@@ -2101,12 +2103,14 @@ function farmPumpLookup(age) { return farmDayLookup(FARM_PUMP, age); }
 function farmFpmLookup(age)  { return farmDayLookup(FARM_FPM, age); }
 function mixedBwLookup(age)  { return farmDayLookup(MIXED_BW, age); }
 
+// Three-zone feed status — "กินมาก / กินปกติ / กินน้อย".
+// The earlier 5-zone scheme (CRITICAL/LOW/LIGHT/OK/OVERFEED) was too
+// granular for the daily decision: operators wanted a single trinary
+// readout. Tolerance band kept at ±5%.
 function feedStatus(dev) {
-  if (dev > 5)      return 'OVERFEED';
-  if (dev >= -5)    return 'OK';
-  if (dev >= -10)   return 'LIGHT';
-  if (dev >= -20)   return 'LOW';
-  return 'CRITICAL';
+  if (dev > 5)   return 'HIGH';     // กินมาก
+  if (dev < -5)  return 'LOW';      // กินน้อย
+  return 'NORMAL';                  // กินปกติ
 }
 
 // Compares actual g/bird/day against the FARM's own feed program (primary).
@@ -2199,23 +2203,29 @@ function mortalityBreakdown(h) {
   return { died, culled, total, morning, evening, cullRate, pattern };
 }
 
-// Compares actual measured weight against the MIXED-SEX standard (PRIMARY)
-// from the farm's own "คละเพศ" reference table. Ross 308 BW is kept along
-// as a secondary reference only.
+// Weight check — actual must exceed (initial chick weight × 4.5).
+// This replaces the age-banded mixed-sex standard with a simpler
+// growth-multiplier rule the farm has standardised on: at any weighing,
+// the bird should already weigh at least 4.5× its placement weight.
+// Falls back to 0.040 kg (40 g) initial when the file doesn't carry
+// "น้ำหนักลูกไก่"/"น.น. แรกเข้า" — that's the industry default.
+const WEIGHT_MULT_THRESHOLD = 4.5;
 function weightVsStandard(h) {
-  if (!h.age || !h.wt_age) return null;
-  const stdBw = mixedBwLookup(h.age);
-  if (stdBw == null || stdBw === 0) return null;
-  const devPct = ((h.wt_age - stdBw) / stdBw) * 100;
-  let status;
-  if (devPct < -5)     status = 'BEHIND';
-  else if (devPct > 5) status = 'AHEAD';
-  else                 status = 'ON';
-  // SECONDARY reference: Ross 308 pure-breed BW
-  const ross = rossLookup(h.age);
-  const rossBw = ross ? ross.bw : null;
-  const rossDev = rossBw ? ((h.wt_age - rossBw) / rossBw) * 100 : null;
-  return { actual: h.wt_age, std: stdBw, devPct, status, rossBw, rossDev };
+  if (!h.wt_age) return null;
+  const initial = (h.wt_initial && h.wt_initial > 0) ? h.wt_initial : 0.040;
+  const threshold = initial * WEIGHT_MULT_THRESHOLD;
+  const ratio = h.wt_age / initial;
+  const status = h.wt_age >= threshold ? 'ABOVE' : 'BELOW';
+  const devPct = ((h.wt_age - threshold) / threshold) * 100;
+  return {
+    actual: h.wt_age,
+    initial,
+    threshold,
+    ratio,
+    devPct,
+    status,
+    multiplier: WEIGHT_MULT_THRESHOLD,
+  };
 }
 
 // Feed wastage: cumulative % loaded into the house minus % actually eaten.
@@ -2278,9 +2288,10 @@ function houseRiskScore(h, farmHouses) {
 
   const feed = analyzeFeed(h);
   if (feed) {
-    if (feed.status === 'CRITICAL')      add(30, `กินอาหารน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}% (เสี่ยงป่วย)`);
-    else if (feed.status === 'LOW')      add(15, `กินอาหารน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}%`);
-    else if (feed.status === 'OVERFEED') add(5,  `กินเกินเกณฑ์ +${feed.dev.toFixed(0)}%`);
+    if (feed.status === 'LOW' && feed.dev <= -20)     add(30, `กินน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}% (เสี่ยงป่วย)`);
+    else if (feed.status === 'LOW' && feed.dev <= -10) add(15, `กินน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}%`);
+    else if (feed.status === 'LOW')                    add(8,  `กินน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}%`);
+    else if (feed.status === 'HIGH')                   add(5,  `กินมากกว่าเกณฑ์ +${feed.dev.toFixed(0)}%`);
   }
 
   const wf = waterFeedRatio(h);
@@ -2296,9 +2307,10 @@ function houseRiskScore(h, farmHouses) {
   }
 
   const wv = weightVsStandard(h);
-  if (wv) {
-    if (wv.devPct < -10)     add(15, `น้ำหนักต่ำกว่าเกณฑ์มาก ${wv.devPct.toFixed(0)}%`);
-    else if (wv.devPct < -5) add(8,  `น้ำหนักต่ำกว่าเกณฑ์ ${wv.devPct.toFixed(0)}%`);
+  if (wv && wv.status === 'BELOW') {
+    // The "× 4.5" rule is a binary trip-wire — if it fires at all, the
+    // bird is materially underweight, so the score lift is uniform.
+    add(15, `น้ำหนักต่ำกว่าเกณฑ์ ${wv.ratio.toFixed(1)}× (ต่ำกว่า ${WEIGHT_MULT_THRESHOLD}× แรกเข้า)`);
   }
 
   if ((h.density || 0) > 11.7) add(8, `ความหนาแน่นสูง ${h.density.toFixed(1)} ตัว/ตร.ม.`);
@@ -2890,6 +2902,13 @@ function parseRowData(row, colMap) {
   r.feed_day        = num('feed_day');
   r.water           = num('water');
   r.wt_age          = num('wt_age');
+  // wt_initial can land in either kg (e.g. 0.040) or grams (e.g. 40),
+  // depending on the template. Normalise to kg — a chick is never
+  // heavier than ~100 g, so anything above 1 must be grams.
+  {
+    const w0 = num('wt_initial');
+    r.wt_initial = (w0 != null && w0 > 1) ? w0 / 1000 : w0;
+  }
   r.wt_actual       = num('wt_actual');
   r.wt_target       = colMap.wt_target != null ? row[colMap.wt_target] : null;
   // daily death/cull breakdown (เช้า/เย็น × ตาย/คัด)
@@ -2982,6 +3001,7 @@ function buildHouses(rows, headerIdx, colMap) {
 // ====================================================================
 function parseHouseDailyHistory(workbook) {
   const histories = {};
+  const initialWeights = {};   // houseNum -> kg (from H-sheet header)
   const hSheets = workbook.SheetNames.filter(n => /^\s*H\s*\d+\s*$/i.test(n));
   for (const name of hSheets) {
     const m = name.match(/H\s*(\d+)/i);
@@ -2989,6 +3009,28 @@ function parseHouseDailyHistory(workbook) {
     const houseNum = parseInt(m[1], 10);
     const sheet = workbook.Sheets[name];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+    // Pull the per-house initial chick weight ("น้ำหนักเฉลี่ยวันแรก", in grams)
+    // out of the H-sheet preamble. We scan rows 0–6 because the label position
+    // varies slightly between templates. Values are clamped to a sane range so
+    // a stray number elsewhere on the line doesn't sneak through.
+    for (let r = 0; r < Math.min(7, rows.length); r++) {
+      const row = rows[r] || [];
+      for (let c = 0; c < row.length; c++) {
+        const cell = String(row[c] == null ? '' : row[c]);
+        if (cell.includes('น้ำหนักเฉลี่ยวันแรก') || cell.includes('น้ำหนักลูกไก่วันแรก')) {
+          for (let cc = c + 1; cc < Math.min(c + 6, row.length); cc++) {
+            const v = parseNumeric(row[cc]);
+            if (v != null && v > 10 && v < 200) {
+              initialWeights[houseNum] = v / 1000;   // grams → kg
+              break;
+            }
+          }
+          break;
+        }
+      }
+      if (initialWeights[houseNum] != null) break;
+    }
 
     // Find the header row — first row containing both 'อายุไก่' and 'วันที่'.
     let hidx = -1;
@@ -3047,7 +3089,7 @@ function parseHouseDailyHistory(workbook) {
     }
     if (daily.length > 0) histories[houseNum] = daily;
   }
-  return histories;
+  return { histories, initialWeights };
 }
 
 async function parseExcelFile(file) {
@@ -3088,16 +3130,20 @@ async function parseExcelFile(file) {
         }
 
         // Attach per-house daily history from H 1..H N sheets when available.
-        // The template usually pre-fills the H-sheet forward with formulas
-        // (date serials, zeroed totals, sometimes garbage water values), so
-        // truncate to the face sheet's reported current age — that's the
-        // source of truth for "what's been recorded so far".
-        const histories = parseHouseDailyHistory(workbook);
+        // Also harvest the initial chick weight ("น้ำหนักเฉลี่ยวันแรก") out of
+        // the H-sheet preamble when the face sheet didn't carry the column —
+        // four templates ship four slightly different layouts.
+        const { histories, initialWeights } = parseHouseDailyHistory(workbook);
         for (const h of houses) {
           const num = Number(h.house);
           let hist = Number.isFinite(num) ? (histories[num] || null) : null;
+          // Truncate to current age so formula-filled future rows don't show up.
           if (hist && h.age != null) hist = hist.filter(d => d.day <= h.age);
           h.dailyHistory = hist && hist.length > 0 ? hist : null;
+          // Fill in initial weight from H sheet when face sheet lacked it.
+          if (h.wt_initial == null && Number.isFinite(num) && initialWeights[num] != null) {
+            h.wt_initial = initialWeights[num];
+          }
         }
 
         const info = extractFarmInfo(rows, file.name);
@@ -3474,33 +3520,23 @@ function renderFeed(farmKeys) {
     }
   }
 
-  const counts = { OK: 0, LIGHT: 0, LOW: 0, CRITICAL: 0, OVERFEED: 0 };
+  const counts = { NORMAL: 0, LOW: 0, HIGH: 0 };
   allHouses.forEach(h => counts[h.status]++);
 
   const feedKpi = `
     <div class="stat">
-      <div class="lab">ปกติ (OK)</div>
-      <div class="val" style="color:var(--green)">${counts.OK}</div>
-      <div class="delta">±5%</div>
+      <div class="lab">กินปกติ</div>
+      <div class="val" style="color:var(--green)">${counts.NORMAL}</div>
+      <div class="delta">±5% ของเกณฑ์</div>
     </div>
     <div class="stat">
-      <div class="lab">LIGHT</div>
-      <div class="val" style="color:var(--amber-soft)">${counts.LIGHT}</div>
-      <div class="delta">-5 ถึง -10%</div>
+      <div class="lab">กินน้อย</div>
+      <div class="val" style="color:var(--red)">${counts.LOW}</div>
+      <div class="delta ${counts.LOW > 0 ? 'warn' : ''}">น้อยกว่า −5% · ต้องตรวจ</div>
     </div>
     <div class="stat">
-      <div class="lab">LOW</div>
-      <div class="val" style="color:#c87f60">${counts.LOW}</div>
-      <div class="delta">-10 ถึง -20%</div>
-    </div>
-    <div class="stat">
-      <div class="lab">CRITICAL</div>
-      <div class="val" style="color:var(--red)">${counts.CRITICAL}</div>
-      <div class="delta warn">น้อย &gt; 20% · เสี่ยง!</div>
-    </div>
-    <div class="stat">
-      <div class="lab">OVERFEED</div>
-      <div class="val" style="color:var(--purple)">${counts.OVERFEED}</div>
+      <div class="lab">กินมาก</div>
+      <div class="val" style="color:var(--amber)">${counts.HIGH}</div>
       <div class="delta">มากกว่า +5%</div>
     </div>
   `;
@@ -3524,20 +3560,21 @@ function renderFeed(farmKeys) {
   });
 
   const ADVICE = {
-    OK: 'ปกติ · กินตามเกณฑ์ฟาร์ม',
-    LIGHT: 'controlled feed · ตรวจน.น.รายสัปดาห์',
-    LOW: 'พิจารณาเพิ่ม 10-15% หาก น.น.ต่ำกว่าเกณฑ์',
-    CRITICAL: 'ตรวจสุขภาพ! ไก่อาจป่วย · เช็คน้ำ-แสง-อุณหภูมิ',
-    OVERFEED: 'เช็คการสิ้นเปลือง + recheck สูตร'
+    NORMAL: 'ปกติ · กินตามเกณฑ์ฟาร์ม',
+    LOW:    'กินน้อยกว่าเกณฑ์ · ตรวจสุขภาพ/น้ำ/อุณหภูมิ — เสี่ยงป่วย',
+    HIGH:   'กินเกินเกณฑ์ · เช็คการสิ้นเปลือง + recheck สูตร',
   };
 
-  const STATUS_PILL = { OK:'ok', LIGHT:'light', LOW:'low', CRITICAL:'cf', OVERFEED:'over' };
-  const STATUS_LABEL = { OK:'OK', LIGHT:'LIGHT', LOW:'LOW', CRITICAL:'CRITICAL', OVERFEED:'OVER' };
+  const STATUS_PILL  = { NORMAL: 'ok', LOW: 'crit', HIGH: 'cf' };
+  const STATUS_LABEL = { NORMAL: 'กินปกติ', LOW: 'กินน้อย', HIGH: 'กินมาก' };
 
   const rowsHtml = sorted.map((h, i) => {
     const fc = getFarmClass(h.farmKey, farmKeys);
-    const rowCls = h.status === 'CRITICAL' ? 'crit' : h.status === 'LOW' ? 'high' : '';
-    const devCls = h.dev > 5 ? 'pct-c' : h.dev < -15 ? 'pct-c' : h.dev < -5 ? 'pct-w' : 'pct-o';
+    const rowCls = h.status === 'LOW' && h.dev <= -10 ? 'crit'
+                 : h.status === 'LOW' ? 'high' : '';
+    const devCls = h.status === 'LOW' ? 'pct-c'
+                 : h.status === 'HIGH' ? 'pct-w'
+                 : 'pct-o';
     const devSign = h.dev >= 0 ? '+' : '';
     return `
       <tr class="${rowCls}">
@@ -3806,8 +3843,8 @@ const WATER_PILL   = { OK: 'ok', LOW: 'low', HIGH: 'high', BADDATA: 'over' };
 const WATER_LABEL  = { OK: 'ปกติ', LOW: 'น้ำน้อย', HIGH: 'น้ำสูง', BADDATA: 'ข้อมูลผิด' };
 const PATTERN_PILL  = { EVEN: 'ok', HEAT: 'cf', NIGHT: 'light' };
 const PATTERN_LABEL = { EVEN: 'สม่ำเสมอ', HEAT: 'เย็นหนัก · heat stress', NIGHT: 'เช้าหนัก · หนาว/กลางคืน' };
-const WEIGHT_PILL   = { ON: 'ok', BEHIND: 'low', AHEAD: 'watch' };
-const WEIGHT_LABEL  = { ON: 'ตามเกณฑ์', BEHIND: 'โตช้า', AHEAD: 'โตเร็ว' };
+const WEIGHT_PILL   = { ABOVE: 'ok', BELOW: 'crit' };
+const WEIGHT_LABEL  = { ABOVE: 'ผ่านเกณฑ์ ≥4.5×', BELOW: 'ต่ำกว่า 4.5×' };
 const WASTE_PILL    = { OK: 'ok', WATCH: 'light', HIGH: 'low' };
 const WASTE_LABEL   = { OK: 'ปกติ', WATCH: 'เฝ้าระวัง', HIGH: 'หกเยอะ' };
 
@@ -3833,7 +3870,7 @@ function renderHealth(farmKeys) {
   const avgCull = bd.length ? bd.reduce((s,x) => s + x.b.cullRate, 0) / bd.length : null;
 
   const wv = allHouses.map(h => ({ h, w: weightVsStandard(h) })).filter(x => x.w);
-  const behind = wv.filter(x => x.w.status === 'BEHIND').length;
+  const behind = wv.filter(x => x.w.status === 'BELOW').length;
 
   document.getElementById('health-kpi').innerHTML = `
     <div class="stat">
@@ -3852,9 +3889,9 @@ function renderHealth(farmKeys) {
       <div class="delta">ของการสูญเสียทั้งหมด</div>
     </div>
     <div class="stat">
-      <div class="lab">เล้าโตช้ากว่าเกณฑ์</div>
+      <div class="lab">เล้าน้ำหนักต่ำกว่าเกณฑ์</div>
       <div class="val">${wv.length ? behind : '–'}</div>
-      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; เกณฑ์คละเพศ −5%</div>
+      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; 4.5× ของน้ำหนักแรกเข้า</div>
     </div>
   `;
 
@@ -3940,26 +3977,28 @@ function renderHealth(farmKeys) {
   document.getElementById('cull-cards').innerHTML = cards ||
     `<div class="insight">ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"</div>`;
 
-  // ---------- 7C · actual weight vs mixed-sex standard (Ross 308 secondary) ----------
+  // ---------- 7C · actual weight vs initial × 4.5 ----------
+  // Each row shows: actual / initial (placement) / 4.5× threshold /
+  // multiplier achieved / pass-fail badge.
   const weightRows = wv
-    .sort((a,b) => a.w.devPct - b.w.devPct)
+    .sort((a, b) => a.w.ratio - b.w.ratio)
     .map((x, i) => {
       const { h, w } = x;
-      const rowCls = w.status === 'BEHIND' ? 'crit' : '';
-      const devCls = w.status === 'BEHIND' ? 'pct-c' : w.status === 'AHEAD' ? 'pct-o' : 'pct-w';
-      const sign = w.devPct >= 0 ? '+' : '';
+      const rowCls = w.status === 'BELOW' ? 'crit' : '';
+      const ratioCls = w.status === 'BELOW' ? 'pct-c' : 'pct-o';
       return `<tr class="${rowCls}">
         <td><b>${i+1}</b></td>
         <td>${pill(h)}</td>
-        <td class="mono">${h.age}</td>
+        <td class="mono">${h.age != null ? h.age : '–'}</td>
         <td class="mono">${w.actual.toFixed(3)}</td>
-        <td class="mono">${w.std.toFixed(3)}</td>
-        <td class="pct ${devCls}">${sign}${w.devPct.toFixed(1)}%</td>
+        <td class="mono">${(w.initial * 1000).toFixed(0)}</td>
+        <td class="mono">${w.threshold.toFixed(3)}</td>
+        <td class="pct ${ratioCls}">${w.ratio.toFixed(2)}×</td>
         <td><span class="pill ${WEIGHT_PILL[w.status]}">${WEIGHT_LABEL[w.status]}</span></td>
       </tr>`;
     }).join('');
   document.getElementById('weight-tbody').innerHTML = weightRows ||
-    emptyRow(7, 'ไม่มีข้อมูลน้ำหนัก — ไฟล์ Excel อาจไม่มีคอลัมน์ "น.น.ตามอายุ" หรือ "อายุ"');
+    emptyRow(8, 'ไม่มีข้อมูลน้ำหนัก — ไฟล์ Excel อาจไม่มีคอลัมน์ "น.น.ตามอายุ" หรือ "อายุ"');
 
   // ---------- 7D · feed loaded vs eaten ----------
   const waste = allHouses.map(h => ({ h, f: feedWaste(h) })).filter(x => x.f);
@@ -4729,64 +4768,86 @@ function chartTemperature(daily) {
 }
 
 // ====================================================================
-// Chart 4 · น้ำหนัก vs คละเพศ — actual line + dashed STD line
+// Chart 4 · น้ำหนัก vs (น้ำหนักแรกเข้า × 4.5)
+// Plots the actual weight line against a horizontal floor at 4.5×
+// initial. Every weighing point is judged against that one floor; the
+// status badge fires the moment any reading dips below it.
 // ====================================================================
-function chartWeight(daily) {
+function chartWeight(daily, h) {
   const days = daily.map(d => d.day);
   const actuals = daily.map(d => d.weight);
   const haveWt = actuals.filter(v => v != null && v > 0);
   if (haveWt.length === 0) {
-    return svgFrame('⚖️ น้ำหนัก vs เกณฑ์',
+    return svgFrame('⚖️ น้ำหนัก vs เกณฑ์ 4.5×',
       `<text x="${ANA_W/2}" y="${ANA_H/2}" text-anchor="middle" fill="${COL.inkMute}"
              font-family="IBM Plex Sans Thai">ยังไม่มีการชั่งน้ำหนัก</text>`,
       { status: 'neutral', badge: '–', headline: '–' });
   }
-  // Latest actual weight & deviation
+
+  // Find latest weighing.
   let lastWt = null, lastWtDay = null;
   for (let i = daily.length - 1; i >= 0; i--) {
     if (daily[i].weight != null && daily[i].weight > 0) {
       lastWt = daily[i].weight; lastWtDay = daily[i].day; break;
     }
   }
-  const stdAtLast = mixedBwLookup(lastWtDay);
-  const devPct = stdAtLast ? ((lastWt - stdAtLast) / stdAtLast) * 100 : null;
+
+  // Initial weight + threshold (fallback 40 g if file didn't carry it).
+  const initial = (h && h.wt_initial && h.wt_initial > 0) ? h.wt_initial : 0.040;
+  const threshold = initial * 4.5;
+  const ratio = lastWt / initial;
+  const everBelow = daily.some(d =>
+    d.weight != null && d.weight > 0 && d.weight < threshold);
+
   let status, badge, takeaway;
-  if (devPct == null)                    { status = 'neutral'; badge = '–'; takeaway = ''; }
-  else if (devPct < -10)                 { status = 'bad';  badge = '🚨 โตช้ามาก'; }
-  else if (devPct < -5)                  { status = 'warn'; badge = '⚠ โตช้า'; }
-  else if (devPct > 5)                   { status = 'good'; badge = '✓ โตเร็ว'; }
-  else                                   { status = 'good'; badge = '✓ ตามเกณฑ์'; }
-  takeaway = devPct == null
-    ? 'รอข้อมูลน้ำหนักเพิ่มเติม'
-    : devPct < -5
-      ? `Day ${lastWtDay}: หนัก ${lastWt.toFixed(2)} กก. ต่ำกว่าเกณฑ์ <b>${Math.abs(devPct).toFixed(1)}%</b> — เช็คอาหาร/โรค`
-      : devPct > 5
-        ? `Day ${lastWtDay}: หนัก ${lastWt.toFixed(2)} กก. สูงกว่าเกณฑ์ <b>${devPct.toFixed(1)}%</b> · ดีมาก`
-        : `Day ${lastWtDay}: หนัก ${lastWt.toFixed(2)} กก. ตามเกณฑ์ (${devPct >= 0 ? '+' : ''}${devPct.toFixed(1)}%)`;
+  if (lastWt < threshold) {
+    status = 'bad';
+    badge = `🚨 ต่ำกว่า 4.5× (${ratio.toFixed(1)}×)`;
+    takeaway = `Day ${lastWtDay}: น้ำหนัก <b>${lastWt.toFixed(2)} กก.</b> = ${ratio.toFixed(1)}× แรกเข้า (${(initial*1000).toFixed(0)} กรัม) — ต่ำกว่าเกณฑ์ 4.5× ต้องเช็คอาหาร/สุขภาพ`;
+  } else if (everBelow) {
+    status = 'warn';
+    badge = `⚠ เคยต่ำ · ตอนนี้ ${ratio.toFixed(1)}×`;
+    takeaway = `Day ${lastWtDay}: น้ำหนัก ${lastWt.toFixed(2)} กก. = ${ratio.toFixed(1)}× — ปัจจุบันผ่าน แต่เคยต่ำกว่า 4.5× ในรุ่นนี้`;
+  } else {
+    status = 'good';
+    badge = `✓ ${ratio.toFixed(1)}× ของแรกเข้า`;
+    takeaway = `Day ${lastWtDay}: น้ำหนัก <b>${lastWt.toFixed(2)} กก.</b> = ${ratio.toFixed(1)}× แรกเข้า · ผ่านเกณฑ์ 4.5× ตลอดรุ่น`;
+  }
 
-  const stdSeries = days.map(d => [d, mixedBwLookup(d)]);
-  const allVals = [...haveWt, ...stdSeries.map(p => p[1]).filter(v => v != null)];
-  const yMax = Math.max(...allVals) * 1.1;
+  const yMax = Math.max(...haveWt, threshold) * 1.10;
   const scales = makeScales(days, 0, yMax);
-
   const actLine = linePath(daily.map(d => [d.day, d.weight]), scales);
-  const stdLine = linePath(stdSeries, scales);
 
-  // Big marker on the latest measurement
-  const lastMarker = lastWtDay != null
-    ? `<circle cx="${scales.px(lastWtDay)}" cy="${scales.py(lastWt)}" r="5" fill="${COL.blue}"/>
-       <circle cx="${scales.px(lastWtDay)}" cy="${scales.py(lastWt)}" r="10" fill="${COL.blue}" opacity="0.18"/>` : '';
+  // Horizontal threshold line
+  const tY = scales.py(threshold);
+  const thresholdLine = `
+    <line x1="${scales.area.x0}" x2="${scales.area.x1}" y1="${tY}" y2="${tY}"
+          stroke="${COL.red}" stroke-dasharray="5 4" stroke-width="1.6"/>
+    <text x="${scales.area.x1 - 4}" y="${tY - 5}" text-anchor="end"
+          font-family="IBM Plex Sans Thai, sans-serif" font-size="10"
+          font-weight="600" fill="${COL.red}">เกณฑ์ 4.5× = ${threshold.toFixed(2)} กก.</text>`;
+
+  // Per-weighing markers (red if below threshold, green if above)
+  const markers = daily.map(d => {
+    if (d.weight == null || d.weight <= 0) return '';
+    const c = d.weight < threshold ? COL.red : COL.green;
+    return `<circle cx="${scales.px(d.day)}" cy="${scales.py(d.weight)}" r="4" fill="${c}"/>`;
+  }).join('');
+
+  // Halo on the latest measurement.
+  const halo = lastWtDay != null
+    ? `<circle cx="${scales.px(lastWtDay)}" cy="${scales.py(lastWt)}" r="11" fill="${lastWt < threshold ? COL.red : COL.green}" opacity="0.18"/>`
+    : '';
 
   const yTicks = niceTicks(0, yMax, 3);
   const axes = drawAxes(scales, yTicks, pickXTicks(days));
 
-  return svgFrame('⚖️ น้ำหนัก vs เกณฑ์', `${axes}
-    <path d="${stdLine}" fill="none" stroke="${COL.inkMute}" stroke-width="1.8" stroke-dasharray="4 3"/>
+  return svgFrame('⚖️ น้ำหนัก vs เกณฑ์ 4.5×', `${axes}${thresholdLine}
     <path d="${actLine}" fill="none" stroke="${COL.blue}" stroke-width="2.4"/>
-    ${lastMarker}`, {
+    ${halo}${markers}`, {
     status, badge,
-    headline: lastWt ? `${lastWt.toFixed(2)}<small> กก. · Day ${lastWtDay}</small>` : '–',
-    subtitle: stdAtLast ? `เกณฑ์คละเพศ Day ${lastWtDay}: ${stdAtLast.toFixed(2)} กก. (${devPct >= 0 ? '+' : ''}${devPct.toFixed(1)}%)` : '',
+    headline: `${lastWt.toFixed(2)}<small> กก.</small> · <span class="num-secondary">${ratio.toFixed(1)}×</span><small> ของแรกเข้า</small>`,
+    subtitle: `น้ำหนักแรกเข้า ${(initial*1000).toFixed(0)} กรัม · เกณฑ์ขั้นต่ำ ${threshold.toFixed(2)} กก. ทุกครั้งที่ชั่ง`,
     takeaway,
   });
 }
@@ -4939,8 +5000,10 @@ function chartWaterFeed(daily) {
 // ====================================================================
 // Problem detection — surfaces specific days the operator should review.
 // ====================================================================
-function detectProblems(daily) {
+function detectProblems(daily, h) {
   const bullets = [];
+  const initial = (h && h.wt_initial && h.wt_initial > 0) ? h.wt_initial : 0.040;
+  const wtThreshold = initial * 4.5;
   const losses = daily.map(d => d.total_loss || 0);
   const avg = losses.reduce((s,v)=>s+v,0) / Math.max(1, losses.length);
   // Mortality spikes (3x avg AND ≥30)
@@ -4961,18 +5024,17 @@ function detectProblems(daily) {
     const more = dailyAlerts.length > 5 ? ` +อีก ${dailyAlerts.length - 5}` : '';
     bullets.push(`<b class="bad">วันที่ตายทะลุเกณฑ์ ${MORTALITY_THRESHOLDS.dailyPct*100}%/วัน:</b> ${top}${more}`);
   }
-  // Weight behind
+  // Weight below 4.5× initial.
   const behind = [];
   daily.forEach(d => {
-    if (d.weight == null) return;
-    const std = mixedBwLookup(d.day);
-    if (!std) return;
-    const dev = ((d.weight - std) / std) * 100;
-    if (dev < -5) behind.push({ day: d.day, dev });
+    if (d.weight == null || d.weight <= 0) return;
+    if (d.weight < wtThreshold) {
+      behind.push({ day: d.day, ratio: d.weight / initial });
+    }
   });
   if (behind.length > 0) {
-    const worst = behind.reduce((a,b) => b.dev < a.dev ? b : a);
-    bullets.push(`<b class="warn">น้ำหนักต่ำกว่าเกณฑ์:</b> ${behind.length} จุดที่ชั่ง (แย่สุด Day ${worst.day}: ${worst.dev.toFixed(1)}%)`);
+    const worst = behind.reduce((a, b) => b.ratio < a.ratio ? b : a);
+    bullets.push(`<b class="warn">น้ำหนักต่ำกว่าเกณฑ์ 4.5× ของแรกเข้า:</b> ${behind.length} จุดที่ชั่ง (แย่สุด Day ${worst.day}: ${worst.ratio.toFixed(1)}× แรกเข้า)`);
   }
   // Feed shortfall
   const feedShort = [];
@@ -5040,7 +5102,7 @@ function buildAnalysisContent(sel) {
       </div>
     </div>`;
 
-  const problems = detectProblems(daily);
+  const problems = detectProblems(daily, h);
   const problemsHtml = problems.length === 0
     ? `<div class="insight good">✓ ไม่พบความผิดปกติชัดเจนตลอดรุ่นนี้</div>`
     : `<div class="ana-problems"><h4>⚠ ปัญหาที่ตรวจพบ <small>· ${problems.length} จุด</small></h4>
@@ -5051,7 +5113,7 @@ function buildAnalysisContent(sel) {
       ${chartMortality(daily)}
       ${chartAmPm(daily)}
       ${chartTemperature(daily)}
-      ${chartWeight(daily)}
+      ${chartWeight(daily, h)}
       ${chartFeed(daily)}
       ${chartWaterFeed(daily)}
     </div>`;

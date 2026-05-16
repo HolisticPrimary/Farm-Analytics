@@ -143,6 +143,13 @@ function parseRowData(row, colMap) {
   r.feed_day        = num('feed_day');
   r.water           = num('water');
   r.wt_age          = num('wt_age');
+  // wt_initial can land in either kg (e.g. 0.040) or grams (e.g. 40),
+  // depending on the template. Normalise to kg — a chick is never
+  // heavier than ~100 g, so anything above 1 must be grams.
+  {
+    const w0 = num('wt_initial');
+    r.wt_initial = (w0 != null && w0 > 1) ? w0 / 1000 : w0;
+  }
   r.wt_actual       = num('wt_actual');
   r.wt_target       = colMap.wt_target != null ? row[colMap.wt_target] : null;
   // daily death/cull breakdown (เช้า/เย็น × ตาย/คัด)
@@ -235,6 +242,7 @@ function buildHouses(rows, headerIdx, colMap) {
 // ====================================================================
 function parseHouseDailyHistory(workbook) {
   const histories = {};
+  const initialWeights = {};   // houseNum -> kg (from H-sheet header)
   const hSheets = workbook.SheetNames.filter(n => /^\s*H\s*\d+\s*$/i.test(n));
   for (const name of hSheets) {
     const m = name.match(/H\s*(\d+)/i);
@@ -242,6 +250,28 @@ function parseHouseDailyHistory(workbook) {
     const houseNum = parseInt(m[1], 10);
     const sheet = workbook.Sheets[name];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+    // Pull the per-house initial chick weight ("น้ำหนักเฉลี่ยวันแรก", in grams)
+    // out of the H-sheet preamble. We scan rows 0–6 because the label position
+    // varies slightly between templates. Values are clamped to a sane range so
+    // a stray number elsewhere on the line doesn't sneak through.
+    for (let r = 0; r < Math.min(7, rows.length); r++) {
+      const row = rows[r] || [];
+      for (let c = 0; c < row.length; c++) {
+        const cell = String(row[c] == null ? '' : row[c]);
+        if (cell.includes('น้ำหนักเฉลี่ยวันแรก') || cell.includes('น้ำหนักลูกไก่วันแรก')) {
+          for (let cc = c + 1; cc < Math.min(c + 6, row.length); cc++) {
+            const v = parseNumeric(row[cc]);
+            if (v != null && v > 10 && v < 200) {
+              initialWeights[houseNum] = v / 1000;   // grams → kg
+              break;
+            }
+          }
+          break;
+        }
+      }
+      if (initialWeights[houseNum] != null) break;
+    }
 
     // Find the header row — first row containing both 'อายุไก่' and 'วันที่'.
     let hidx = -1;
@@ -300,7 +330,7 @@ function parseHouseDailyHistory(workbook) {
     }
     if (daily.length > 0) histories[houseNum] = daily;
   }
-  return histories;
+  return { histories, initialWeights };
 }
 
 async function parseExcelFile(file) {
@@ -341,16 +371,20 @@ async function parseExcelFile(file) {
         }
 
         // Attach per-house daily history from H 1..H N sheets when available.
-        // The template usually pre-fills the H-sheet forward with formulas
-        // (date serials, zeroed totals, sometimes garbage water values), so
-        // truncate to the face sheet's reported current age — that's the
-        // source of truth for "what's been recorded so far".
-        const histories = parseHouseDailyHistory(workbook);
+        // Also harvest the initial chick weight ("น้ำหนักเฉลี่ยวันแรก") out of
+        // the H-sheet preamble when the face sheet didn't carry the column —
+        // four templates ship four slightly different layouts.
+        const { histories, initialWeights } = parseHouseDailyHistory(workbook);
         for (const h of houses) {
           const num = Number(h.house);
           let hist = Number.isFinite(num) ? (histories[num] || null) : null;
+          // Truncate to current age so formula-filled future rows don't show up.
           if (hist && h.age != null) hist = hist.filter(d => d.day <= h.age);
           h.dailyHistory = hist && hist.length > 0 ? hist : null;
+          // Fill in initial weight from H sheet when face sheet lacked it.
+          if (h.wt_initial == null && Number.isFinite(num) && initialWeights[num] != null) {
+            h.wt_initial = initialWeights[num];
+          }
         }
 
         const info = extractFarmInfo(rows, file.name);

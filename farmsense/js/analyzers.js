@@ -91,12 +91,14 @@ function farmPumpLookup(age) { return farmDayLookup(FARM_PUMP, age); }
 function farmFpmLookup(age)  { return farmDayLookup(FARM_FPM, age); }
 function mixedBwLookup(age)  { return farmDayLookup(MIXED_BW, age); }
 
+// Three-zone feed status — "กินมาก / กินปกติ / กินน้อย".
+// The earlier 5-zone scheme (CRITICAL/LOW/LIGHT/OK/OVERFEED) was too
+// granular for the daily decision: operators wanted a single trinary
+// readout. Tolerance band kept at ±5%.
 function feedStatus(dev) {
-  if (dev > 5)      return 'OVERFEED';
-  if (dev >= -5)    return 'OK';
-  if (dev >= -10)   return 'LIGHT';
-  if (dev >= -20)   return 'LOW';
-  return 'CRITICAL';
+  if (dev > 5)   return 'HIGH';     // กินมาก
+  if (dev < -5)  return 'LOW';      // กินน้อย
+  return 'NORMAL';                  // กินปกติ
 }
 
 // Compares actual g/bird/day against the FARM's own feed program (primary).
@@ -189,23 +191,29 @@ function mortalityBreakdown(h) {
   return { died, culled, total, morning, evening, cullRate, pattern };
 }
 
-// Compares actual measured weight against the MIXED-SEX standard (PRIMARY)
-// from the farm's own "คละเพศ" reference table. Ross 308 BW is kept along
-// as a secondary reference only.
+// Weight check — actual must exceed (initial chick weight × 4.5).
+// This replaces the age-banded mixed-sex standard with a simpler
+// growth-multiplier rule the farm has standardised on: at any weighing,
+// the bird should already weigh at least 4.5× its placement weight.
+// Falls back to 0.040 kg (40 g) initial when the file doesn't carry
+// "น้ำหนักลูกไก่"/"น.น. แรกเข้า" — that's the industry default.
+const WEIGHT_MULT_THRESHOLD = 4.5;
 function weightVsStandard(h) {
-  if (!h.age || !h.wt_age) return null;
-  const stdBw = mixedBwLookup(h.age);
-  if (stdBw == null || stdBw === 0) return null;
-  const devPct = ((h.wt_age - stdBw) / stdBw) * 100;
-  let status;
-  if (devPct < -5)     status = 'BEHIND';
-  else if (devPct > 5) status = 'AHEAD';
-  else                 status = 'ON';
-  // SECONDARY reference: Ross 308 pure-breed BW
-  const ross = rossLookup(h.age);
-  const rossBw = ross ? ross.bw : null;
-  const rossDev = rossBw ? ((h.wt_age - rossBw) / rossBw) * 100 : null;
-  return { actual: h.wt_age, std: stdBw, devPct, status, rossBw, rossDev };
+  if (!h.wt_age) return null;
+  const initial = (h.wt_initial && h.wt_initial > 0) ? h.wt_initial : 0.040;
+  const threshold = initial * WEIGHT_MULT_THRESHOLD;
+  const ratio = h.wt_age / initial;
+  const status = h.wt_age >= threshold ? 'ABOVE' : 'BELOW';
+  const devPct = ((h.wt_age - threshold) / threshold) * 100;
+  return {
+    actual: h.wt_age,
+    initial,
+    threshold,
+    ratio,
+    devPct,
+    status,
+    multiplier: WEIGHT_MULT_THRESHOLD,
+  };
 }
 
 // Feed wastage: cumulative % loaded into the house minus % actually eaten.
@@ -268,9 +276,10 @@ function houseRiskScore(h, farmHouses) {
 
   const feed = analyzeFeed(h);
   if (feed) {
-    if (feed.status === 'CRITICAL')      add(30, `กินอาหารน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}% (เสี่ยงป่วย)`);
-    else if (feed.status === 'LOW')      add(15, `กินอาหารน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}%`);
-    else if (feed.status === 'OVERFEED') add(5,  `กินเกินเกณฑ์ +${feed.dev.toFixed(0)}%`);
+    if (feed.status === 'LOW' && feed.dev <= -20)     add(30, `กินน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}% (เสี่ยงป่วย)`);
+    else if (feed.status === 'LOW' && feed.dev <= -10) add(15, `กินน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}%`);
+    else if (feed.status === 'LOW')                    add(8,  `กินน้อยกว่าเกณฑ์ ${feed.dev.toFixed(0)}%`);
+    else if (feed.status === 'HIGH')                   add(5,  `กินมากกว่าเกณฑ์ +${feed.dev.toFixed(0)}%`);
   }
 
   const wf = waterFeedRatio(h);
@@ -286,9 +295,10 @@ function houseRiskScore(h, farmHouses) {
   }
 
   const wv = weightVsStandard(h);
-  if (wv) {
-    if (wv.devPct < -10)     add(15, `น้ำหนักต่ำกว่าเกณฑ์มาก ${wv.devPct.toFixed(0)}%`);
-    else if (wv.devPct < -5) add(8,  `น้ำหนักต่ำกว่าเกณฑ์ ${wv.devPct.toFixed(0)}%`);
+  if (wv && wv.status === 'BELOW') {
+    // The "× 4.5" rule is a binary trip-wire — if it fires at all, the
+    // bird is materially underweight, so the score lift is uniform.
+    add(15, `น้ำหนักต่ำกว่าเกณฑ์ ${wv.ratio.toFixed(1)}× (ต่ำกว่า ${WEIGHT_MULT_THRESHOLD}× แรกเข้า)`);
   }
 
   if ((h.density || 0) > 11.7) add(8, `ความหนาแน่นสูง ${h.density.toFixed(1)} ตัว/ตร.ม.`);

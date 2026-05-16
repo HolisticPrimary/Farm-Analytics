@@ -251,6 +251,7 @@ const COL_KEYWORDS = {
   feed_day:        ['อาหาร/วัน', 'อาหารต่อวัน', 'อาหาร'],
   water:           ['น้ำ/ลิตร', 'น้ำ-ลิตร', 'น้ำ'],
   wt_age:          ['น.น.ตามอายุ', 'น้ำหนักตามอายุ', 'ตามอายุ'],
+  wt_initial:      ['น้ำหนักลูกไก่', 'น.น แรกเข้า', 'น.น.แรกเข้า', 'น้ำหนักแรกเข้า'],
   catch_date:      ['กำหนดจับ'],
   wt_target:       ['น.น.วันจับ', 'น.น.จับ'],
   wt_actual:       ['น.น.จับจริง', 'น้ำหนักจับจริง'],
@@ -269,5 +270,5 @@ const COL_EXCLUDE = {
 const COL_NUMERIC = [
   'qty_in', 'density', 'death_day', 'death_cum', 'pct_cum', 'disabled',
   'qty_rem', 'feed_loaded_pct', 'feed_pct', 'feed_day', 'water',
-  'wt_age', 'wt_actual',
+  'wt_age', 'wt_initial', 'wt_actual',
 ];

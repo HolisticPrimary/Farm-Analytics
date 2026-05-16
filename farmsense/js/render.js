@@ -356,33 +356,23 @@ function renderFeed(farmKeys) {
     }
   }
 
-  const counts = { OK: 0, LIGHT: 0, LOW: 0, CRITICAL: 0, OVERFEED: 0 };
+  const counts = { NORMAL: 0, LOW: 0, HIGH: 0 };
   allHouses.forEach(h => counts[h.status]++);
 
   const feedKpi = `
     <div class="stat">
-      <div class="lab">ปกติ (OK)</div>
-      <div class="val" style="color:var(--green)">${counts.OK}</div>
-      <div class="delta">±5%</div>
+      <div class="lab">กินปกติ</div>
+      <div class="val" style="color:var(--green)">${counts.NORMAL}</div>
+      <div class="delta">±5% ของเกณฑ์</div>
     </div>
     <div class="stat">
-      <div class="lab">LIGHT</div>
-      <div class="val" style="color:var(--amber-soft)">${counts.LIGHT}</div>
-      <div class="delta">-5 ถึง -10%</div>
+      <div class="lab">กินน้อย</div>
+      <div class="val" style="color:var(--red)">${counts.LOW}</div>
+      <div class="delta ${counts.LOW > 0 ? 'warn' : ''}">น้อยกว่า −5% · ต้องตรวจ</div>
     </div>
     <div class="stat">
-      <div class="lab">LOW</div>
-      <div class="val" style="color:#c87f60">${counts.LOW}</div>
-      <div class="delta">-10 ถึง -20%</div>
-    </div>
-    <div class="stat">
-      <div class="lab">CRITICAL</div>
-      <div class="val" style="color:var(--red)">${counts.CRITICAL}</div>
-      <div class="delta warn">น้อย &gt; 20% · เสี่ยง!</div>
-    </div>
-    <div class="stat">
-      <div class="lab">OVERFEED</div>
-      <div class="val" style="color:var(--purple)">${counts.OVERFEED}</div>
+      <div class="lab">กินมาก</div>
+      <div class="val" style="color:var(--amber)">${counts.HIGH}</div>
       <div class="delta">มากกว่า +5%</div>
     </div>
   `;
@@ -406,20 +396,21 @@ function renderFeed(farmKeys) {
   });
 
   const ADVICE = {
-    OK: 'ปกติ · กินตามเกณฑ์ฟาร์ม',
-    LIGHT: 'controlled feed · ตรวจน.น.รายสัปดาห์',
-    LOW: 'พิจารณาเพิ่ม 10-15% หาก น.น.ต่ำกว่าเกณฑ์',
-    CRITICAL: 'ตรวจสุขภาพ! ไก่อาจป่วย · เช็คน้ำ-แสง-อุณหภูมิ',
-    OVERFEED: 'เช็คการสิ้นเปลือง + recheck สูตร'
+    NORMAL: 'ปกติ · กินตามเกณฑ์ฟาร์ม',
+    LOW:    'กินน้อยกว่าเกณฑ์ · ตรวจสุขภาพ/น้ำ/อุณหภูมิ — เสี่ยงป่วย',
+    HIGH:   'กินเกินเกณฑ์ · เช็คการสิ้นเปลือง + recheck สูตร',
   };
 
-  const STATUS_PILL = { OK:'ok', LIGHT:'light', LOW:'low', CRITICAL:'cf', OVERFEED:'over' };
-  const STATUS_LABEL = { OK:'OK', LIGHT:'LIGHT', LOW:'LOW', CRITICAL:'CRITICAL', OVERFEED:'OVER' };
+  const STATUS_PILL  = { NORMAL: 'ok', LOW: 'crit', HIGH: 'cf' };
+  const STATUS_LABEL = { NORMAL: 'กินปกติ', LOW: 'กินน้อย', HIGH: 'กินมาก' };
 
   const rowsHtml = sorted.map((h, i) => {
     const fc = getFarmClass(h.farmKey, farmKeys);
-    const rowCls = h.status === 'CRITICAL' ? 'crit' : h.status === 'LOW' ? 'high' : '';
-    const devCls = h.dev > 5 ? 'pct-c' : h.dev < -15 ? 'pct-c' : h.dev < -5 ? 'pct-w' : 'pct-o';
+    const rowCls = h.status === 'LOW' && h.dev <= -10 ? 'crit'
+                 : h.status === 'LOW' ? 'high' : '';
+    const devCls = h.status === 'LOW' ? 'pct-c'
+                 : h.status === 'HIGH' ? 'pct-w'
+                 : 'pct-o';
     const devSign = h.dev >= 0 ? '+' : '';
     return `
       <tr class="${rowCls}">

@@ -378,64 +378,86 @@ function chartTemperature(daily) {
 }
 
 // ====================================================================
-// Chart 4 · น้ำหนัก vs คละเพศ — actual line + dashed STD line
+// Chart 4 · น้ำหนัก vs (น้ำหนักแรกเข้า × 4.5)
+// Plots the actual weight line against a horizontal floor at 4.5×
+// initial. Every weighing point is judged against that one floor; the
+// status badge fires the moment any reading dips below it.
 // ====================================================================
-function chartWeight(daily) {
+function chartWeight(daily, h) {
   const days = daily.map(d => d.day);
   const actuals = daily.map(d => d.weight);
   const haveWt = actuals.filter(v => v != null && v > 0);
   if (haveWt.length === 0) {
-    return svgFrame('⚖️ น้ำหนัก vs เกณฑ์',
+    return svgFrame('⚖️ น้ำหนัก vs เกณฑ์ 4.5×',
       `<text x="${ANA_W/2}" y="${ANA_H/2}" text-anchor="middle" fill="${COL.inkMute}"
              font-family="IBM Plex Sans Thai">ยังไม่มีการชั่งน้ำหนัก</text>`,
       { status: 'neutral', badge: '–', headline: '–' });
   }
-  // Latest actual weight & deviation
+
+  // Find latest weighing.
   let lastWt = null, lastWtDay = null;
   for (let i = daily.length - 1; i >= 0; i--) {
     if (daily[i].weight != null && daily[i].weight > 0) {
       lastWt = daily[i].weight; lastWtDay = daily[i].day; break;
     }
   }
-  const stdAtLast = mixedBwLookup(lastWtDay);
-  const devPct = stdAtLast ? ((lastWt - stdAtLast) / stdAtLast) * 100 : null;
+
+  // Initial weight + threshold (fallback 40 g if file didn't carry it).
+  const initial = (h && h.wt_initial && h.wt_initial > 0) ? h.wt_initial : 0.040;
+  const threshold = initial * 4.5;
+  const ratio = lastWt / initial;
+  const everBelow = daily.some(d =>
+    d.weight != null && d.weight > 0 && d.weight < threshold);
+
   let status, badge, takeaway;
-  if (devPct == null)                    { status = 'neutral'; badge = '–'; takeaway = ''; }
-  else if (devPct < -10)                 { status = 'bad';  badge = '🚨 โตช้ามาก'; }
-  else if (devPct < -5)                  { status = 'warn'; badge = '⚠ โตช้า'; }
-  else if (devPct > 5)                   { status = 'good'; badge = '✓ โตเร็ว'; }
-  else                                   { status = 'good'; badge = '✓ ตามเกณฑ์'; }
-  takeaway = devPct == null
-    ? 'รอข้อมูลน้ำหนักเพิ่มเติม'
-    : devPct < -5
-      ? `Day ${lastWtDay}: หนัก ${lastWt.toFixed(2)} กก. ต่ำกว่าเกณฑ์ <b>${Math.abs(devPct).toFixed(1)}%</b> — เช็คอาหาร/โรค`
-      : devPct > 5
-        ? `Day ${lastWtDay}: หนัก ${lastWt.toFixed(2)} กก. สูงกว่าเกณฑ์ <b>${devPct.toFixed(1)}%</b> · ดีมาก`
-        : `Day ${lastWtDay}: หนัก ${lastWt.toFixed(2)} กก. ตามเกณฑ์ (${devPct >= 0 ? '+' : ''}${devPct.toFixed(1)}%)`;
+  if (lastWt < threshold) {
+    status = 'bad';
+    badge = `🚨 ต่ำกว่า 4.5× (${ratio.toFixed(1)}×)`;
+    takeaway = `Day ${lastWtDay}: น้ำหนัก <b>${lastWt.toFixed(2)} กก.</b> = ${ratio.toFixed(1)}× แรกเข้า (${(initial*1000).toFixed(0)} กรัม) — ต่ำกว่าเกณฑ์ 4.5× ต้องเช็คอาหาร/สุขภาพ`;
+  } else if (everBelow) {
+    status = 'warn';
+    badge = `⚠ เคยต่ำ · ตอนนี้ ${ratio.toFixed(1)}×`;
+    takeaway = `Day ${lastWtDay}: น้ำหนัก ${lastWt.toFixed(2)} กก. = ${ratio.toFixed(1)}× — ปัจจุบันผ่าน แต่เคยต่ำกว่า 4.5× ในรุ่นนี้`;
+  } else {
+    status = 'good';
+    badge = `✓ ${ratio.toFixed(1)}× ของแรกเข้า`;
+    takeaway = `Day ${lastWtDay}: น้ำหนัก <b>${lastWt.toFixed(2)} กก.</b> = ${ratio.toFixed(1)}× แรกเข้า · ผ่านเกณฑ์ 4.5× ตลอดรุ่น`;
+  }
 
-  const stdSeries = days.map(d => [d, mixedBwLookup(d)]);
-  const allVals = [...haveWt, ...stdSeries.map(p => p[1]).filter(v => v != null)];
-  const yMax = Math.max(...allVals) * 1.1;
+  const yMax = Math.max(...haveWt, threshold) * 1.10;
   const scales = makeScales(days, 0, yMax);
-
   const actLine = linePath(daily.map(d => [d.day, d.weight]), scales);
-  const stdLine = linePath(stdSeries, scales);
 
-  // Big marker on the latest measurement
-  const lastMarker = lastWtDay != null
-    ? `<circle cx="${scales.px(lastWtDay)}" cy="${scales.py(lastWt)}" r="5" fill="${COL.blue}"/>
-       <circle cx="${scales.px(lastWtDay)}" cy="${scales.py(lastWt)}" r="10" fill="${COL.blue}" opacity="0.18"/>` : '';
+  // Horizontal threshold line
+  const tY = scales.py(threshold);
+  const thresholdLine = `
+    <line x1="${scales.area.x0}" x2="${scales.area.x1}" y1="${tY}" y2="${tY}"
+          stroke="${COL.red}" stroke-dasharray="5 4" stroke-width="1.6"/>
+    <text x="${scales.area.x1 - 4}" y="${tY - 5}" text-anchor="end"
+          font-family="IBM Plex Sans Thai, sans-serif" font-size="10"
+          font-weight="600" fill="${COL.red}">เกณฑ์ 4.5× = ${threshold.toFixed(2)} กก.</text>`;
+
+  // Per-weighing markers (red if below threshold, green if above)
+  const markers = daily.map(d => {
+    if (d.weight == null || d.weight <= 0) return '';
+    const c = d.weight < threshold ? COL.red : COL.green;
+    return `<circle cx="${scales.px(d.day)}" cy="${scales.py(d.weight)}" r="4" fill="${c}"/>`;
+  }).join('');
+
+  // Halo on the latest measurement.
+  const halo = lastWtDay != null
+    ? `<circle cx="${scales.px(lastWtDay)}" cy="${scales.py(lastWt)}" r="11" fill="${lastWt < threshold ? COL.red : COL.green}" opacity="0.18"/>`
+    : '';
 
   const yTicks = niceTicks(0, yMax, 3);
   const axes = drawAxes(scales, yTicks, pickXTicks(days));
 
-  return svgFrame('⚖️ น้ำหนัก vs เกณฑ์', `${axes}
-    <path d="${stdLine}" fill="none" stroke="${COL.inkMute}" stroke-width="1.8" stroke-dasharray="4 3"/>
+  return svgFrame('⚖️ น้ำหนัก vs เกณฑ์ 4.5×', `${axes}${thresholdLine}
     <path d="${actLine}" fill="none" stroke="${COL.blue}" stroke-width="2.4"/>
-    ${lastMarker}`, {
+    ${halo}${markers}`, {
     status, badge,
-    headline: lastWt ? `${lastWt.toFixed(2)}<small> กก. · Day ${lastWtDay}</small>` : '–',
-    subtitle: stdAtLast ? `เกณฑ์คละเพศ Day ${lastWtDay}: ${stdAtLast.toFixed(2)} กก. (${devPct >= 0 ? '+' : ''}${devPct.toFixed(1)}%)` : '',
+    headline: `${lastWt.toFixed(2)}<small> กก.</small> · <span class="num-secondary">${ratio.toFixed(1)}×</span><small> ของแรกเข้า</small>`,
+    subtitle: `น้ำหนักแรกเข้า ${(initial*1000).toFixed(0)} กรัม · เกณฑ์ขั้นต่ำ ${threshold.toFixed(2)} กก. ทุกครั้งที่ชั่ง`,
     takeaway,
   });
 }
@@ -588,8 +610,10 @@ function chartWaterFeed(daily) {
 // ====================================================================
 // Problem detection — surfaces specific days the operator should review.
 // ====================================================================
-function detectProblems(daily) {
+function detectProblems(daily, h) {
   const bullets = [];
+  const initial = (h && h.wt_initial && h.wt_initial > 0) ? h.wt_initial : 0.040;
+  const wtThreshold = initial * 4.5;
   const losses = daily.map(d => d.total_loss || 0);
   const avg = losses.reduce((s,v)=>s+v,0) / Math.max(1, losses.length);
   // Mortality spikes (3x avg AND ≥30)
@@ -610,18 +634,17 @@ function detectProblems(daily) {
     const more = dailyAlerts.length > 5 ? ` +อีก ${dailyAlerts.length - 5}` : '';
     bullets.push(`<b class="bad">วันที่ตายทะลุเกณฑ์ ${MORTALITY_THRESHOLDS.dailyPct*100}%/วัน:</b> ${top}${more}`);
   }
-  // Weight behind
+  // Weight below 4.5× initial.
   const behind = [];
   daily.forEach(d => {
-    if (d.weight == null) return;
-    const std = mixedBwLookup(d.day);
-    if (!std) return;
-    const dev = ((d.weight - std) / std) * 100;
-    if (dev < -5) behind.push({ day: d.day, dev });
+    if (d.weight == null || d.weight <= 0) return;
+    if (d.weight < wtThreshold) {
+      behind.push({ day: d.day, ratio: d.weight / initial });
+    }
   });
   if (behind.length > 0) {
-    const worst = behind.reduce((a,b) => b.dev < a.dev ? b : a);
-    bullets.push(`<b class="warn">น้ำหนักต่ำกว่าเกณฑ์:</b> ${behind.length} จุดที่ชั่ง (แย่สุด Day ${worst.day}: ${worst.dev.toFixed(1)}%)`);
+    const worst = behind.reduce((a, b) => b.ratio < a.ratio ? b : a);
+    bullets.push(`<b class="warn">น้ำหนักต่ำกว่าเกณฑ์ 4.5× ของแรกเข้า:</b> ${behind.length} จุดที่ชั่ง (แย่สุด Day ${worst.day}: ${worst.ratio.toFixed(1)}× แรกเข้า)`);
   }
   // Feed shortfall
   const feedShort = [];
@@ -689,7 +712,7 @@ function buildAnalysisContent(sel) {
       </div>
     </div>`;
 
-  const problems = detectProblems(daily);
+  const problems = detectProblems(daily, h);
   const problemsHtml = problems.length === 0
     ? `<div class="insight good">✓ ไม่พบความผิดปกติชัดเจนตลอดรุ่นนี้</div>`
     : `<div class="ana-problems"><h4>⚠ ปัญหาที่ตรวจพบ <small>· ${problems.length} จุด</small></h4>
@@ -700,7 +723,7 @@ function buildAnalysisContent(sel) {
       ${chartMortality(daily)}
       ${chartAmPm(daily)}
       ${chartTemperature(daily)}
-      ${chartWeight(daily)}
+      ${chartWeight(daily, h)}
       ${chartFeed(daily)}
       ${chartWaterFeed(daily)}
     </div>`;

@@ -8,8 +8,8 @@ const WATER_PILL   = { OK: 'ok', LOW: 'low', HIGH: 'high', BADDATA: 'over' };
 const WATER_LABEL  = { OK: 'ปกติ', LOW: 'น้ำน้อย', HIGH: 'น้ำสูง', BADDATA: 'ข้อมูลผิด' };
 const PATTERN_PILL  = { EVEN: 'ok', HEAT: 'cf', NIGHT: 'light' };
 const PATTERN_LABEL = { EVEN: 'สม่ำเสมอ', HEAT: 'เย็นหนัก · heat stress', NIGHT: 'เช้าหนัก · หนาว/กลางคืน' };
-const WEIGHT_PILL   = { ON: 'ok', BEHIND: 'low', AHEAD: 'watch' };
-const WEIGHT_LABEL  = { ON: 'ตามเกณฑ์', BEHIND: 'โตช้า', AHEAD: 'โตเร็ว' };
+const WEIGHT_PILL   = { ABOVE: 'ok', BELOW: 'crit' };
+const WEIGHT_LABEL  = { ABOVE: 'ผ่านเกณฑ์ ≥4.5×', BELOW: 'ต่ำกว่า 4.5×' };
 const WASTE_PILL    = { OK: 'ok', WATCH: 'light', HIGH: 'low' };
 const WASTE_LABEL   = { OK: 'ปกติ', WATCH: 'เฝ้าระวัง', HIGH: 'หกเยอะ' };
 
@@ -35,7 +35,7 @@ function renderHealth(farmKeys) {
   const avgCull = bd.length ? bd.reduce((s,x) => s + x.b.cullRate, 0) / bd.length : null;
 
   const wv = allHouses.map(h => ({ h, w: weightVsStandard(h) })).filter(x => x.w);
-  const behind = wv.filter(x => x.w.status === 'BEHIND').length;
+  const behind = wv.filter(x => x.w.status === 'BELOW').length;
 
   document.getElementById('health-kpi').innerHTML = `
     <div class="stat">
@@ -54,9 +54,9 @@ function renderHealth(farmKeys) {
       <div class="delta">ของการสูญเสียทั้งหมด</div>
     </div>
     <div class="stat">
-      <div class="lab">เล้าโตช้ากว่าเกณฑ์</div>
+      <div class="lab">เล้าน้ำหนักต่ำกว่าเกณฑ์</div>
       <div class="val">${wv.length ? behind : '–'}</div>
-      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; เกณฑ์คละเพศ −5%</div>
+      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; 4.5× ของน้ำหนักแรกเข้า</div>
     </div>
   `;
 
@@ -142,26 +142,28 @@ function renderHealth(farmKeys) {
   document.getElementById('cull-cards').innerHTML = cards ||
     `<div class="insight">ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"</div>`;
 
-  // ---------- 7C · actual weight vs mixed-sex standard (Ross 308 secondary) ----------
+  // ---------- 7C · actual weight vs initial × 4.5 ----------
+  // Each row shows: actual / initial (placement) / 4.5× threshold /
+  // multiplier achieved / pass-fail badge.
   const weightRows = wv
-    .sort((a,b) => a.w.devPct - b.w.devPct)
+    .sort((a, b) => a.w.ratio - b.w.ratio)
     .map((x, i) => {
       const { h, w } = x;
-      const rowCls = w.status === 'BEHIND' ? 'crit' : '';
-      const devCls = w.status === 'BEHIND' ? 'pct-c' : w.status === 'AHEAD' ? 'pct-o' : 'pct-w';
-      const sign = w.devPct >= 0 ? '+' : '';
+      const rowCls = w.status === 'BELOW' ? 'crit' : '';
+      const ratioCls = w.status === 'BELOW' ? 'pct-c' : 'pct-o';
       return `<tr class="${rowCls}">
         <td><b>${i+1}</b></td>
         <td>${pill(h)}</td>
-        <td class="mono">${h.age}</td>
+        <td class="mono">${h.age != null ? h.age : '–'}</td>
         <td class="mono">${w.actual.toFixed(3)}</td>
-        <td class="mono">${w.std.toFixed(3)}</td>
-        <td class="pct ${devCls}">${sign}${w.devPct.toFixed(1)}%</td>
+        <td class="mono">${(w.initial * 1000).toFixed(0)}</td>
+        <td class="mono">${w.threshold.toFixed(3)}</td>
+        <td class="pct ${ratioCls}">${w.ratio.toFixed(2)}×</td>
         <td><span class="pill ${WEIGHT_PILL[w.status]}">${WEIGHT_LABEL[w.status]}</span></td>
       </tr>`;
     }).join('');
   document.getElementById('weight-tbody').innerHTML = weightRows ||
-    emptyRow(7, 'ไม่มีข้อมูลน้ำหนัก — ไฟล์ Excel อาจไม่มีคอลัมน์ "น.น.ตามอายุ" หรือ "อายุ"');
+    emptyRow(8, 'ไม่มีข้อมูลน้ำหนัก — ไฟล์ Excel อาจไม่มีคอลัมน์ "น.น.ตามอายุ" หรือ "อายุ"');
 
   // ---------- 7D · feed loaded vs eaten ----------
   const waste = allHouses.map(h => ({ h, f: feedWaste(h) })).filter(x => x.f);
