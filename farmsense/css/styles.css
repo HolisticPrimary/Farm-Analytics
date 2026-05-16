@@ -71,10 +71,20 @@ b { font-weight: 600; }
 }
 .brand-name {
   font-family: 'Bai Jamjuree', sans-serif;
-  font-size: 21px; font-weight: 700; color: var(--navy);
-  line-height: 1.1; letter-spacing: -0.01em;
+  font-size: 22px; font-weight: 700; color: var(--navy);
+  line-height: 1.05; letter-spacing: -0.015em;
 }
-.brand-tag { font-size: 12px; color: var(--ink-mute); letter-spacing: 0.02em; }
+.brand-tag {
+  font-family: 'Bai Jamjuree', sans-serif;
+  font-size: 11.5px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+.brand-tag .brand-by   { font-style: italic; color: var(--ink-mute); margin-right: 3px; }
+.brand-tag .brand-author { color: var(--ink-soft); font-weight: 600; }
+.brand-tag .brand-dot  { color: var(--border-2); margin: 0 5px; }
+.brand-tag .brand-zone { color: var(--amber); font-weight: 600; letter-spacing: 0.03em; }
 .topbar-meta {
   display: flex; align-items: center; gap: 12px;
   font-size: 12px; color: var(--ink-mute);
@@ -137,12 +147,12 @@ b { font-weight: 600; }
 }
 .cover-title {
   font-family: 'Bai Jamjuree', sans-serif;
-  font-size: clamp(30px, 4.6vw, 52px);
+  font-size: clamp(44px, 6.5vw, 78px);
   font-weight: 700;
-  line-height: 1.26;
-  letter-spacing: -0.025em;
-  margin-bottom: 14px;
-  padding-bottom: 0.06em;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  margin-bottom: 8px;
+  padding-bottom: 0.08em;
   /* navy→blue gradient text, echoing the logo's two-tone wordmark */
   background: linear-gradient(96deg, var(--navy) 0%, var(--navy-2) 46%, var(--blue) 108%);
   -webkit-background-clip: text;
@@ -150,6 +160,40 @@ b { font-weight: 600; }
   color: transparent;
   -webkit-text-fill-color: transparent;
   animation: riseIn .75s ease .28s both;
+}
+.cover-author {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 0 0 22px;
+  font-family: 'Bai Jamjuree', sans-serif;
+  animation: riseIn .75s ease .35s both;
+}
+.cover-author .ca-line {
+  flex: 0 0 56px; height: 1px;
+  background: linear-gradient(to right, transparent, var(--border-2));
+}
+.cover-author .ca-line:last-child {
+  background: linear-gradient(to left, transparent, var(--border-2));
+}
+.cover-author .ca-text {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  font-size: clamp(13px, 1.4vw, 16px);
+  letter-spacing: 0.025em;
+  color: var(--ink-soft);
+}
+.cover-author em {
+  font-style: italic; font-weight: 400; color: var(--ink-mute);
+}
+.cover-author b {
+  font-weight: 700; color: var(--navy);
+  letter-spacing: 0.005em;
+}
+.cover-author .ca-em {
+  color: var(--ink-mute); opacity: 0.65;
+  padding: 0 2px;
+}
+.cover-author .ca-zone {
+  color: var(--amber); font-weight: 600;
+  letter-spacing: 0.06em;
 }
 .cover-sub {
   font-family: 'IBM Plex Sans Thai', sans-serif;
@@ -592,6 +636,11 @@ footer.colophon {
   font-size: 12px; color: var(--ink-mute);
   display: flex; justify-content: space-between;
   flex-wrap: wrap; gap: 12px;
+}
+footer.colophon b { color: var(--navy); font-weight: 700; letter-spacing: -0.005em; }
+footer.colophon em { font-style: italic; color: var(--ink-mute); }
+footer.colophon .footer-zone {
+  color: var(--amber); font-weight: 600; letter-spacing: 0.04em;
 }
 
 /* ============ MAPPING MODAL ============ */

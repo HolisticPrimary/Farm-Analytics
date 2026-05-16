@@ -71,7 +71,7 @@ function exportJSON() {
     prices: STATE.prices,
     farms,
   };
-  downloadFile('farmsense-' + _dateStr() + '.json',
+  downloadFile('smartfarm-' + _dateStr() + '.json',
     JSON.stringify(out, null, 2), 'application/json');
 }
 
@@ -143,9 +143,16 @@ function buildReportBody() {
   const dailyRate = totalRem > 0 ? (totalDeadToday / totalRem) * 100 : 0;
 
   let html = `
-    <h1 style="font-size:22pt; color:#16284a; margin-bottom:2pt;">รายงานวิเคราะห์ฟาร์มไก่ · FarmSense</h1>
-    <p style="font-size:11pt; color:#666; margin-top:0;">วันที่รายงาน: ${_esc(dateThai)}</p>
-    <hr style="border:none; border-top:2px solid #16284a; margin:12pt 0;">
+    <div style="border-bottom:2px solid #16284a; padding-bottom:8pt; margin-bottom:12pt;">
+      <h1 style="font-size:26pt; color:#16284a; margin:0; letter-spacing:-0.5pt;">SmartFarm</h1>
+      <p style="margin:2pt 0 0; font-size:11pt; color:#46526b;">
+        <em style="color:#8a94a8;">by</em>
+        <b style="color:#16284a;">Waranyoo</b>
+        <span style="color:#8a94a8;"> — </span>
+        <span style="color:#c8860b; font-weight:600; letter-spacing:1pt;">PPF Lopburi Zone</span>
+      </p>
+      <p style="margin:6pt 0 0; font-size:10pt; color:#888;">รายงานวิเคราะห์ฟาร์มไก่ · ${_esc(dateThai)}</p>
+    </div>
 
     <h2 style="font-size:16pt; color:#16284a;">§ 1 ภาพรวม</h2>
     <table style="width:100%; border-collapse:collapse; margin-bottom:12pt;">
@@ -352,7 +359,10 @@ function buildReportBody() {
   html += `
     <hr style="margin-top:20pt; border:none; border-top:1px solid #ccc;">
     <p style="font-size:9pt; color:#888; text-align:center;">
-      FarmSense · ระบบวิเคราะห์ฟาร์มไก่ · รายงานสร้างเมื่อ ${_esc(new Date().toLocaleString('th-TH'))}
+      <b style="color:#16284a;">SmartFarm</b> ·
+      <em style="color:#8a94a8;">by</em> Waranyoo —
+      <span style="color:#c8860b; font-weight:600;">PPF Lopburi Zone</span>
+      &nbsp;·&nbsp; รายงานสร้างเมื่อ ${_esc(new Date().toLocaleString('th-TH'))}
     </p>`;
 
   return html;
@@ -368,7 +378,7 @@ xmlns:w="urn:schemas-microsoft-com:office:word"
 xmlns="http://www.w3.org/TR/REC-html40">
 <head>
 <meta charset="utf-8">
-<title>FarmSense Report</title>
+<title>SmartFarm Report · Waranyoo</title>
 <!--[if gte mso 9]>
 <xml>
   <w:WordDocument>
@@ -392,7 +402,7 @@ ${body}
 </div>
 </body>
 </html>`;
-  downloadFile('farmsense-report-' + _dateStr() + '.doc', doc, 'application/msword');
+  downloadFile('smartfarm-report-' + _dateStr() + '.doc', doc, 'application/msword');
 }
 
 // PDF export — opens the report in a fresh popup window styled for
@@ -415,7 +425,7 @@ function exportPdfReport() {
   const printDoc = `<!DOCTYPE html>
 <html lang="th"><head>
 <meta charset="utf-8">
-<title>FarmSense Report</title>
+<title>SmartFarm Report · Waranyoo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
