@@ -322,7 +322,6 @@ function buildReportBody() {
             <tr style="background:#eef2f7; color:#16284a;">
               <th style="border:1px solid #ccc; padding:5pt;">วันที่ชั่ง</th>
               <th style="border:1px solid #ccc; padding:5pt;">น.น. (kg)</th>
-              <th style="border:1px solid #ccc; padding:5pt;">× แรกเข้า</th>
               <th style="border:1px solid #ccc; padding:5pt;">ADG จริง (g/วัน)</th>
               <th style="border:1px solid #ccc; padding:5pt;">ADG Ross</th>
               <th style="border:1px solid #ccc; padding:5pt;">Δ ADG</th>
@@ -335,12 +334,10 @@ function buildReportBody() {
       w.rows.forEach(r => {
         const adgColor = r.adgStatus === 'SLOW' ? '#d62828' : r.adgStatus === 'FAST' ? '#2e7d4f' : '#16284a';
         const fcrColor = r.fcrStatus === 'POOR' ? '#d62828' : r.fcrStatus === 'GREAT' ? '#2e7d4f' : '#16284a';
-        const ratioColor = r.ratioVsInitial < 4.5 ? '#d62828' : '#2e7d4f';
         html += `
           <tr>
             <td style="border:1px solid #ccc; padding:5pt; font-weight:bold;">Day ${r.day}</td>
             <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.weight.toFixed(3)}</td>
-            <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:${ratioColor};">${r.ratioVsInitial.toFixed(1)}×</td>
             <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:${adgColor}; font-weight:bold;">${r.adgActual.toFixed(0)}</td>
             <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.adgRoss != null ? r.adgRoss.toFixed(0) : '–'}</td>
             <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.adgDiffPct != null ? (r.adgDiffPct >= 0 ? '+' : '') + r.adgDiffPct.toFixed(0) + '%' : '–'}</td>

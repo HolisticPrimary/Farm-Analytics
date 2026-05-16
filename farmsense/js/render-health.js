@@ -169,7 +169,6 @@ function renderHealth(farmKeys) {
                       : r.adgStatus === 'FAST' ? 'pct-o' : 'pct-w';
       const fcrCellCls = r.fcrStatus === 'POOR'  ? 'pct-c'
                       : r.fcrStatus === 'GREAT' ? 'pct-o' : 'pct-w';
-      const ratioCls  = r.ratioVsInitial < 4.5 ? 'pct-c' : 'pct-o';
       const adgRossStr = r.adgRoss != null ? r.adgRoss.toFixed(0) : '–';
       const fcrActualStr = r.fcrActual != null ? r.fcrActual.toFixed(2) : '–';
       const fcrRossStr = r.fcrRoss != null ? r.fcrRoss.toFixed(2) : '–';
@@ -182,7 +181,6 @@ function renderHealth(farmKeys) {
       return `<tr>
         <td class="mono"><b>Day ${r.day}</b></td>
         <td class="mono">${r.weight.toFixed(3)}</td>
-        <td class="mono ${ratioCls}">${r.ratioVsInitial.toFixed(1)}×</td>
         <td class="mono ${adgCellCls}"><b>${r.adgActual.toFixed(0)}</b> ${adgDiff}</td>
         <td class="mono">${adgRossStr} g/d</td>
         <td class="mono ${fcrCellCls}"><b>${fcrActualStr}</b> ${fcrDiff}</td>
@@ -204,7 +202,6 @@ function renderHealth(farmKeys) {
             <thead><tr>
               <th>วันที่ชั่ง</th>
               <th>น.น.จริง (kg)</th>
-              <th>× ของแรกเข้า</th>
               <th>ADG จริง</th>
               <th>ADG Ross</th>
               <th>FCR จริง</th>

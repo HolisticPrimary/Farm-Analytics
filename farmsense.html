@@ -4131,7 +4131,6 @@ function renderHealth(farmKeys) {
                       : r.adgStatus === 'FAST' ? 'pct-o' : 'pct-w';
       const fcrCellCls = r.fcrStatus === 'POOR'  ? 'pct-c'
                       : r.fcrStatus === 'GREAT' ? 'pct-o' : 'pct-w';
-      const ratioCls  = r.ratioVsInitial < 4.5 ? 'pct-c' : 'pct-o';
       const adgRossStr = r.adgRoss != null ? r.adgRoss.toFixed(0) : '–';
       const fcrActualStr = r.fcrActual != null ? r.fcrActual.toFixed(2) : '–';
       const fcrRossStr = r.fcrRoss != null ? r.fcrRoss.toFixed(2) : '–';
@@ -4144,7 +4143,6 @@ function renderHealth(farmKeys) {
       return `<tr>
         <td class="mono"><b>Day ${r.day}</b></td>
         <td class="mono">${r.weight.toFixed(3)}</td>
-        <td class="mono ${ratioCls}">${r.ratioVsInitial.toFixed(1)}×</td>
         <td class="mono ${adgCellCls}"><b>${r.adgActual.toFixed(0)}</b> ${adgDiff}</td>
         <td class="mono">${adgRossStr} g/d</td>
         <td class="mono ${fcrCellCls}"><b>${fcrActualStr}</b> ${fcrDiff}</td>
@@ -4166,7 +4164,6 @@ function renderHealth(farmKeys) {
             <thead><tr>
               <th>วันที่ชั่ง</th>
               <th>น.น.จริง (kg)</th>
-              <th>× ของแรกเข้า</th>
               <th>ADG จริง</th>
               <th>ADG Ross</th>
               <th>FCR จริง</th>
@@ -5769,7 +5766,6 @@ function buildReportBody() {
             <tr style="background:#eef2f7; color:#16284a;">
               <th style="border:1px solid #ccc; padding:5pt;">วันที่ชั่ง</th>
               <th style="border:1px solid #ccc; padding:5pt;">น.น. (kg)</th>
-              <th style="border:1px solid #ccc; padding:5pt;">× แรกเข้า</th>
               <th style="border:1px solid #ccc; padding:5pt;">ADG จริง (g/วัน)</th>
               <th style="border:1px solid #ccc; padding:5pt;">ADG Ross</th>
               <th style="border:1px solid #ccc; padding:5pt;">Δ ADG</th>
@@ -5782,12 +5778,10 @@ function buildReportBody() {
       w.rows.forEach(r => {
         const adgColor = r.adgStatus === 'SLOW' ? '#d62828' : r.adgStatus === 'FAST' ? '#2e7d4f' : '#16284a';
         const fcrColor = r.fcrStatus === 'POOR' ? '#d62828' : r.fcrStatus === 'GREAT' ? '#2e7d4f' : '#16284a';
-        const ratioColor = r.ratioVsInitial < 4.5 ? '#d62828' : '#2e7d4f';
         html += `
           <tr>
             <td style="border:1px solid #ccc; padding:5pt; font-weight:bold;">Day ${r.day}</td>
             <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.weight.toFixed(3)}</td>
-            <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:${ratioColor};">${r.ratioVsInitial.toFixed(1)}×</td>
             <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:${adgColor}; font-weight:bold;">${r.adgActual.toFixed(0)}</td>
             <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.adgRoss != null ? r.adgRoss.toFixed(0) : '–'}</td>
             <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.adgDiffPct != null ? (r.adgDiffPct >= 0 ? '+' : '') + r.adgDiffPct.toFixed(0) + '%' : '–'}</td>
