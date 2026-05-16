@@ -36,7 +36,6 @@ js_files = [
     "js/render-alerts.js",
     "js/render-analysis.js",
     "js/render-history.js",
-    "js/sync-sheets.js",
     "js/exports.js",
     "js/main.js",
 ]

@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20260516i">
+<link rel="stylesheet" href="css/styles.css?v=20260516j">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -82,7 +82,6 @@
       <button class="tab" data-tab="feed">อาหาร vs STD <span class="count" id="cnt-feed"></span></button>
       <button class="tab" data-tab="env">อุณหภูมิ &amp; ลม</button>
       <button class="tab" data-tab="export">Export</button>
-      <button class="tab" data-tab="settings">⚙ ตั้งค่า</button>
     </div>
 
     <!-- TAB: OVERVIEW -->
@@ -320,87 +319,25 @@
       <div id="disease-watch"></div>
     </div>
 
-    <!-- TAB: SETTINGS · Google Sheets sync -->
-    <div class="tab-content" id="tab-settings">
-      <h2 class="sec"><span class="num">§ 10</span> ตั้งค่า · เชื่อม Google Sheets</h2>
-      <div class="sec-rule"></div>
-      <p class="lede">เชื่อมต่อ Google Sheet เพื่อเก็บประวัติข้ามวัน · กราฟที่ publish จาก Sheets จะแสดงด้านล่างเพื่อตรวจสอบทันที</p>
-
-      <!-- Step 1 — Web App URL -->
-      <div class="card">
-        <h4>1️⃣ Web App URL (Apps Script) <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· รับข้อมูลที่อัปโหลด → append เข้า Sheet</span></h4>
-        <div class="input-group" style="margin-top:8px">
-          <label>วาง URL ที่ได้จาก "Deploy → Web app"</label>
-          <input type="url" id="sheets-webhook-url" placeholder="https://script.google.com/macros/s/AKfy.../exec">
-        </div>
-        <div class="sync-status" id="sheets-sync-status"></div>
-        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap">
-          <button class="modal-btn primary" id="sheets-save-btn">บันทึก</button>
-          <button class="modal-btn" id="sheets-test-btn">🔬 ทดสอบการเชื่อมต่อ</button>
-          <button class="modal-btn ghost" id="sheets-sync-all-btn">↻ Sync ฟาร์มที่โหลดอยู่ทั้งหมด</button>
-        </div>
-      </div>
-
-      <!-- Step 2 — Chart URL -->
-      <div class="card">
-        <h4>2️⃣ URL กราฟจาก Google Sheets <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· ฝังมาแสดงด้านล่าง</span></h4>
-        <div class="input-group" style="margin-top:8px">
-          <label>ใน Sheet: คลิกกราฟ → ⋮ → Publish chart → Copy URL หรือ iframe</label>
-          <input type="url" id="sheets-chart-url" placeholder="https://docs.google.com/spreadsheets/d/.../pubchart?oid=...">
-        </div>
-        <div class="card-sub" style="margin-top:8px">วางได้ทั้ง URL ตรงๆ หรือโค้ด <code>&lt;iframe ...&gt;</code> เต็มๆ — ระบบจะดึง src ให้เอง</div>
-      </div>
-
-      <!-- Chart preview / embed -->
-      <div id="sheets-chart-embed"></div>
-
-      <!-- Step 3 — Apps Script template -->
-      <div class="card">
-        <h4>3️⃣ โค้ด Apps Script <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· paste ใน Sheet → Extensions → Apps Script</span></h4>
-        <div class="card-sub" style="margin-bottom:8px">เปิด Google Sheet ใหม่ → Extensions → Apps Script → ลบของเดิม → paste โค้ดนี้ → Save → Deploy → Web app</div>
-        <pre id="apps-script-code" class="code-block">กำลังโหลด...</pre>
-        <button class="modal-btn" id="apps-script-copy-btn">📋 Copy โค้ดทั้งหมด</button>
-      </div>
-
-      <!-- Setup walkthrough -->
-      <div class="card">
-        <h4>📖 ขั้นตอนการตั้งค่า (ทำครั้งเดียว ~10 นาที)</h4>
-        <ol class="setup-steps">
-          <li><b>สร้าง Google Sheet ใหม่</b> ตั้งชื่อ เช่น "ประวัติฟาร์ม"</li>
-          <li><b>เปิด Apps Script:</b> เมนู Extensions → Apps Script</li>
-          <li><b>Paste โค้ด</b> จากกล่องข้างบน → กด Save (💾)</li>
-          <li><b>Deploy:</b> Deploy → New deployment → Type: <b>Web app</b><br>
-            <small>Execute as: Me · Who has access: <b>Anyone</b> → Deploy → Authorize</small></li>
-          <li><b>Copy Web app URL</b> → วางในกล่อง 1️⃣ ข้างบน → กดบันทึก</li>
-          <li><b>ทดสอบเชื่อมต่อ</b> ด้วยปุ่ม 🔬 (ควรเห็น "Sync ล่าสุดสำเร็จ")</li>
-          <li><b>อัปโหลดใบหน้าเล้าทดสอบ</b> → ดูใน Sheet ว่ามีแถวเพิ่ม</li>
-          <li><b>ทำกราฟใน Sheet</b> (Insert → Chart) ตามใจ</li>
-          <li><b>Publish กราฟ:</b> คลิกกราฟ → ⋮ → Publish chart → Copy URL</li>
-          <li><b>วาง URL กราฟ</b> ในกล่อง 2️⃣ → กดบันทึก → กราฟปรากฏด้านล่างทันที</li>
-        </ol>
-      </div>
-
-      <div class="card dark">
-        <h4>🔒 ความปลอดภัย &amp; ข้อจำกัด</h4>
-        <div style="font-size:13px; line-height:1.8">
-          <b style="color:var(--gold-soft)">URL ลับ:</b> Web app URL ของ Apps Script ยาวและสุ่ม คนภายนอกเดาไม่ได้ ปลอดภัยพอสำหรับฟาร์มทั่วไป<br>
-          <b style="color:var(--gold-soft)">เพิ่มความปลอดภัย:</b> ในโค้ด Apps Script ใส่ค่า <code>SECRET</code> (ตอนนี้ <i>FarmSense ยังไม่ส่ง secret — ใส่ '' ไว้ก่อน</i>)<br>
-          <b style="color:var(--gold-soft)">ข้อมูลที่ส่ง:</b> KPI สำคัญต่อเล้า (เล้า, อายุ, ตาย, อาหาร, น้ำ, น้ำหนัก) ไม่ส่งไฟล์ Excel ดิบ<br>
-          <b style="color:var(--gold-soft)">localStorage:</b> URL เก็บใน browser นี้เท่านั้น — ใช้คนละเครื่องต้องตั้งค่าใหม่
-        </div>
-      </div>
-    </div>
-
     <!-- TAB: EXPORT -->
     <div class="tab-content" id="tab-export">
       <h2 class="sec"><span class="num">§ 06</span> Export ข้อมูล</h2>
       <div class="sec-rule"></div>
-      <p class="lede">ดาวน์โหลดผลวิเคราะห์ในหลายรูปแบบ — ใช้พิมพ์, ส่งเมล, หรือนำเข้า BI tool</p>
+      <p class="lede">สร้างรายงานสรุปการวิเคราะห์ในรูปแบบที่ต้องการ — ใช้ส่งให้เจ้าของฟาร์ม, ลูกค้า, หรือเก็บไว้เป็นประวัติ</p>
 
       <div class="card">
-        <h4>เลือกรูปแบบ</h4>
+        <h4>📄 รายงานสรุป (มีหัวกระดาษ + ตารางจัดวางสวยงาม)</h4>
+        <div class="card-sub">รายงาน 5 ส่วน: ภาพรวม · เล้าที่ต้องดู · สรุปต่อเล้า · ตาย-คัดเช้า-เย็น · น้ำหนัก/ADG/FCR รายสัปดาห์</div>
         <div class="export-grid">
-          <button class="export-btn" onclick="window.print()">🖨 พิมพ์ / Save as PDF</button>
+          <button class="export-btn primary" id="exp-pdf">📄 Export PDF</button>
+          <button class="export-btn primary" id="exp-word">📝 Export Word (.doc)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>📊 ข้อมูลดิบ (สำหรับ Excel / BI)</h4>
+        <div class="card-sub">ตัวเลขล้วน เปิดด้วย Excel / Google Sheets / Power BI ได้</div>
+        <div class="export-grid">
           <button class="export-btn sec" id="exp-json">⬇ JSON ทั้งหมด</button>
           <button class="export-btn sec" id="exp-mort-csv">⬇ Mortality CSV</button>
           <button class="export-btn sec" id="exp-feed-csv">⬇ Feed CSV</button>
@@ -410,13 +347,21 @@
       <div class="card">
         <h4>คู่มือใช้งาน</h4>
         <ol style="padding-left: 20px; font-size: 13px; line-height: 1.8;">
-          <li><b>เปิดเบราว์เซอร์</b> (Chrome, Edge, Safari, Firefox ใช้ได้หมด)</li>
+          <li><b>เปิดเบราว์เซอร์</b> Chrome / Edge / Safari / Firefox ใช้ได้หมด</li>
           <li><b>ลากไฟล์ใบหน้าเล้า .xlsx</b> มาวางในกล่อง upload — ทำได้ทีละหลายไฟล์</li>
-          <li><b>ระบบจะตรวจชีท "ประมาณการไก่คงเหลือจับ"</b> โดยอัตโนมัติและ parse ข้อมูล</li>
-          <li><b>คลิกแท็บ</b> ตามที่ต้องการดู — ทุกอย่างคำนวณใน browser ของอาร์มเอง ไม่มีการส่งข้อมูลไป server</li>
-          <li><b>ปรับค่าราคา</b> ในแท็บ FCR &amp; กำไร → matrix จะ recompute ทันที</li>
-          <li><b>Export</b> → คลิก "พิมพ์/Save as PDF" หรือดาวน์โหลด CSV/JSON</li>
+          <li><b>คลิกแท็บ</b> ตามที่ต้องการดู — คำนวณใน browser ทั้งหมด ไม่ส่งข้อมูลไปไหน</li>
+          <li><b>Export PDF/Word</b> — เปิดหน้าต่างใหม่พร้อมรายงานจัดหน้าเรียบร้อย กดพิมพ์/เซฟ</li>
         </ol>
+      </div>
+
+      <div class="card">
+        <h4>⚠ ถ้า Export ไม่ทำงาน</h4>
+        <div style="font-size:13px; line-height:1.8">
+          <b>1. กรณีกดแล้วไม่เห็นไฟล์</b> — เช็คโฟลเดอร์ Downloads ของเบราว์เซอร์<br>
+          <b>2. กรณี popup ถูกบล็อก (PDF)</b> — กด <code>🔒</code> ที่ address bar → อนุญาต pop-up<br>
+          <b>3. กรณีเปิดไฟล์โดยตรง (file://) แล้ว Export ไม่ได้</b> — ใช้ลิงก์ <code>holisticprimary.github.io/Farm-Analytics</code> แทน<br>
+          <b>4. กรณี Safari Private Mode</b> — เปลี่ยนเป็น Chrome / Edge หรือเปิดในโหมดปกติ
+        </div>
       </div>
 
       <div class="card dark">
@@ -439,22 +384,21 @@
 </main>
 
 <!-- ====== Application scripts (load order matters) ====== -->
-<script src="js/constants.js?v=20260516i"></script>
-<script src="js/state.js?v=20260516i"></script>
-<script src="js/ui-helpers.js?v=20260516i"></script>
-<script src="js/analyzers.js?v=20260516i"></script>
-<script src="js/analyzers-alerts.js?v=20260516i"></script>
-<script src="js/schema-map.js?v=20260516i"></script>
-<script src="js/history.js?v=20260516i"></script>
-<script src="js/parser.js?v=20260516i"></script>
-<script src="js/render.js?v=20260516i"></script>
-<script src="js/render-health.js?v=20260516i"></script>
-<script src="js/render-alerts.js?v=20260516i"></script>
-<script src="js/render-analysis.js?v=20260516i"></script>
-<script src="js/render-history.js?v=20260516i"></script>
-<script src="js/sync-sheets.js?v=20260516i"></script>
-<script src="js/exports.js?v=20260516i"></script>
-<script src="js/main.js?v=20260516i"></script>
+<script src="js/constants.js?v=20260516j"></script>
+<script src="js/state.js?v=20260516j"></script>
+<script src="js/ui-helpers.js?v=20260516j"></script>
+<script src="js/analyzers.js?v=20260516j"></script>
+<script src="js/analyzers-alerts.js?v=20260516j"></script>
+<script src="js/schema-map.js?v=20260516j"></script>
+<script src="js/history.js?v=20260516j"></script>
+<script src="js/parser.js?v=20260516j"></script>
+<script src="js/render.js?v=20260516j"></script>
+<script src="js/render-health.js?v=20260516j"></script>
+<script src="js/render-alerts.js?v=20260516j"></script>
+<script src="js/render-analysis.js?v=20260516j"></script>
+<script src="js/render-history.js?v=20260516j"></script>
+<script src="js/exports.js?v=20260516j"></script>
+<script src="js/main.js?v=20260516j"></script>
 
 </body>
 </html>

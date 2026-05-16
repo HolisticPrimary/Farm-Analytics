@@ -597,6 +597,8 @@ table tbody tr.std { background: var(--surface-2); font-weight: 500; }
 .export-btn:hover { background: var(--blue); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .export-btn.sec { background: var(--surface); color: var(--ink); border: 1px solid var(--border-2); }
 .export-btn.sec:hover { background: var(--blue-bg); color: var(--blue-dark); border-color: var(--blue-soft); }
+.export-btn.primary { background: var(--blue); }
+.export-btn.primary:hover { background: var(--blue-dark); }
 .export-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 
 /* ============ FOOTER ============ */
@@ -1375,7 +1377,6 @@ footer.colophon {
       <button class="tab" data-tab="feed">อาหาร vs STD <span class="count" id="cnt-feed"></span></button>
       <button class="tab" data-tab="env">อุณหภูมิ &amp; ลม</button>
       <button class="tab" data-tab="export">Export</button>
-      <button class="tab" data-tab="settings">⚙ ตั้งค่า</button>
     </div>
 
     <!-- TAB: OVERVIEW -->
@@ -1613,87 +1614,25 @@ footer.colophon {
       <div id="disease-watch"></div>
     </div>
 
-    <!-- TAB: SETTINGS · Google Sheets sync -->
-    <div class="tab-content" id="tab-settings">
-      <h2 class="sec"><span class="num">§ 10</span> ตั้งค่า · เชื่อม Google Sheets</h2>
-      <div class="sec-rule"></div>
-      <p class="lede">เชื่อมต่อ Google Sheet เพื่อเก็บประวัติข้ามวัน · กราฟที่ publish จาก Sheets จะแสดงด้านล่างเพื่อตรวจสอบทันที</p>
-
-      <!-- Step 1 — Web App URL -->
-      <div class="card">
-        <h4>1️⃣ Web App URL (Apps Script) <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· รับข้อมูลที่อัปโหลด → append เข้า Sheet</span></h4>
-        <div class="input-group" style="margin-top:8px">
-          <label>วาง URL ที่ได้จาก "Deploy → Web app"</label>
-          <input type="url" id="sheets-webhook-url" placeholder="https://script.google.com/macros/s/AKfy.../exec">
-        </div>
-        <div class="sync-status" id="sheets-sync-status"></div>
-        <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap">
-          <button class="modal-btn primary" id="sheets-save-btn">บันทึก</button>
-          <button class="modal-btn" id="sheets-test-btn">🔬 ทดสอบการเชื่อมต่อ</button>
-          <button class="modal-btn ghost" id="sheets-sync-all-btn">↻ Sync ฟาร์มที่โหลดอยู่ทั้งหมด</button>
-        </div>
-      </div>
-
-      <!-- Step 2 — Chart URL -->
-      <div class="card">
-        <h4>2️⃣ URL กราฟจาก Google Sheets <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· ฝังมาแสดงด้านล่าง</span></h4>
-        <div class="input-group" style="margin-top:8px">
-          <label>ใน Sheet: คลิกกราฟ → ⋮ → Publish chart → Copy URL หรือ iframe</label>
-          <input type="url" id="sheets-chart-url" placeholder="https://docs.google.com/spreadsheets/d/.../pubchart?oid=...">
-        </div>
-        <div class="card-sub" style="margin-top:8px">วางได้ทั้ง URL ตรงๆ หรือโค้ด <code>&lt;iframe ...&gt;</code> เต็มๆ — ระบบจะดึง src ให้เอง</div>
-      </div>
-
-      <!-- Chart preview / embed -->
-      <div id="sheets-chart-embed"></div>
-
-      <!-- Step 3 — Apps Script template -->
-      <div class="card">
-        <h4>3️⃣ โค้ด Apps Script <span style="font-size:11px; color:var(--ink-mute); font-weight:400">· paste ใน Sheet → Extensions → Apps Script</span></h4>
-        <div class="card-sub" style="margin-bottom:8px">เปิด Google Sheet ใหม่ → Extensions → Apps Script → ลบของเดิม → paste โค้ดนี้ → Save → Deploy → Web app</div>
-        <pre id="apps-script-code" class="code-block">กำลังโหลด...</pre>
-        <button class="modal-btn" id="apps-script-copy-btn">📋 Copy โค้ดทั้งหมด</button>
-      </div>
-
-      <!-- Setup walkthrough -->
-      <div class="card">
-        <h4>📖 ขั้นตอนการตั้งค่า (ทำครั้งเดียว ~10 นาที)</h4>
-        <ol class="setup-steps">
-          <li><b>สร้าง Google Sheet ใหม่</b> ตั้งชื่อ เช่น "ประวัติฟาร์ม"</li>
-          <li><b>เปิด Apps Script:</b> เมนู Extensions → Apps Script</li>
-          <li><b>Paste โค้ด</b> จากกล่องข้างบน → กด Save (💾)</li>
-          <li><b>Deploy:</b> Deploy → New deployment → Type: <b>Web app</b><br>
-            <small>Execute as: Me · Who has access: <b>Anyone</b> → Deploy → Authorize</small></li>
-          <li><b>Copy Web app URL</b> → วางในกล่อง 1️⃣ ข้างบน → กดบันทึก</li>
-          <li><b>ทดสอบเชื่อมต่อ</b> ด้วยปุ่ม 🔬 (ควรเห็น "Sync ล่าสุดสำเร็จ")</li>
-          <li><b>อัปโหลดใบหน้าเล้าทดสอบ</b> → ดูใน Sheet ว่ามีแถวเพิ่ม</li>
-          <li><b>ทำกราฟใน Sheet</b> (Insert → Chart) ตามใจ</li>
-          <li><b>Publish กราฟ:</b> คลิกกราฟ → ⋮ → Publish chart → Copy URL</li>
-          <li><b>วาง URL กราฟ</b> ในกล่อง 2️⃣ → กดบันทึก → กราฟปรากฏด้านล่างทันที</li>
-        </ol>
-      </div>
-
-      <div class="card dark">
-        <h4>🔒 ความปลอดภัย &amp; ข้อจำกัด</h4>
-        <div style="font-size:13px; line-height:1.8">
-          <b style="color:var(--gold-soft)">URL ลับ:</b> Web app URL ของ Apps Script ยาวและสุ่ม คนภายนอกเดาไม่ได้ ปลอดภัยพอสำหรับฟาร์มทั่วไป<br>
-          <b style="color:var(--gold-soft)">เพิ่มความปลอดภัย:</b> ในโค้ด Apps Script ใส่ค่า <code>SECRET</code> (ตอนนี้ <i>FarmSense ยังไม่ส่ง secret — ใส่ '' ไว้ก่อน</i>)<br>
-          <b style="color:var(--gold-soft)">ข้อมูลที่ส่ง:</b> KPI สำคัญต่อเล้า (เล้า, อายุ, ตาย, อาหาร, น้ำ, น้ำหนัก) ไม่ส่งไฟล์ Excel ดิบ<br>
-          <b style="color:var(--gold-soft)">localStorage:</b> URL เก็บใน browser นี้เท่านั้น — ใช้คนละเครื่องต้องตั้งค่าใหม่
-        </div>
-      </div>
-    </div>
-
     <!-- TAB: EXPORT -->
     <div class="tab-content" id="tab-export">
       <h2 class="sec"><span class="num">§ 06</span> Export ข้อมูล</h2>
       <div class="sec-rule"></div>
-      <p class="lede">ดาวน์โหลดผลวิเคราะห์ในหลายรูปแบบ — ใช้พิมพ์, ส่งเมล, หรือนำเข้า BI tool</p>
+      <p class="lede">สร้างรายงานสรุปการวิเคราะห์ในรูปแบบที่ต้องการ — ใช้ส่งให้เจ้าของฟาร์ม, ลูกค้า, หรือเก็บไว้เป็นประวัติ</p>
 
       <div class="card">
-        <h4>เลือกรูปแบบ</h4>
+        <h4>📄 รายงานสรุป (มีหัวกระดาษ + ตารางจัดวางสวยงาม)</h4>
+        <div class="card-sub">รายงาน 5 ส่วน: ภาพรวม · เล้าที่ต้องดู · สรุปต่อเล้า · ตาย-คัดเช้า-เย็น · น้ำหนัก/ADG/FCR รายสัปดาห์</div>
         <div class="export-grid">
-          <button class="export-btn" onclick="window.print()">🖨 พิมพ์ / Save as PDF</button>
+          <button class="export-btn primary" id="exp-pdf">📄 Export PDF</button>
+          <button class="export-btn primary" id="exp-word">📝 Export Word (.doc)</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4>📊 ข้อมูลดิบ (สำหรับ Excel / BI)</h4>
+        <div class="card-sub">ตัวเลขล้วน เปิดด้วย Excel / Google Sheets / Power BI ได้</div>
+        <div class="export-grid">
           <button class="export-btn sec" id="exp-json">⬇ JSON ทั้งหมด</button>
           <button class="export-btn sec" id="exp-mort-csv">⬇ Mortality CSV</button>
           <button class="export-btn sec" id="exp-feed-csv">⬇ Feed CSV</button>
@@ -1703,13 +1642,21 @@ footer.colophon {
       <div class="card">
         <h4>คู่มือใช้งาน</h4>
         <ol style="padding-left: 20px; font-size: 13px; line-height: 1.8;">
-          <li><b>เปิดเบราว์เซอร์</b> (Chrome, Edge, Safari, Firefox ใช้ได้หมด)</li>
+          <li><b>เปิดเบราว์เซอร์</b> Chrome / Edge / Safari / Firefox ใช้ได้หมด</li>
           <li><b>ลากไฟล์ใบหน้าเล้า .xlsx</b> มาวางในกล่อง upload — ทำได้ทีละหลายไฟล์</li>
-          <li><b>ระบบจะตรวจชีท "ประมาณการไก่คงเหลือจับ"</b> โดยอัตโนมัติและ parse ข้อมูล</li>
-          <li><b>คลิกแท็บ</b> ตามที่ต้องการดู — ทุกอย่างคำนวณใน browser ของอาร์มเอง ไม่มีการส่งข้อมูลไป server</li>
-          <li><b>ปรับค่าราคา</b> ในแท็บ FCR &amp; กำไร → matrix จะ recompute ทันที</li>
-          <li><b>Export</b> → คลิก "พิมพ์/Save as PDF" หรือดาวน์โหลด CSV/JSON</li>
+          <li><b>คลิกแท็บ</b> ตามที่ต้องการดู — คำนวณใน browser ทั้งหมด ไม่ส่งข้อมูลไปไหน</li>
+          <li><b>Export PDF/Word</b> — เปิดหน้าต่างใหม่พร้อมรายงานจัดหน้าเรียบร้อย กดพิมพ์/เซฟ</li>
         </ol>
+      </div>
+
+      <div class="card">
+        <h4>⚠ ถ้า Export ไม่ทำงาน</h4>
+        <div style="font-size:13px; line-height:1.8">
+          <b>1. กรณีกดแล้วไม่เห็นไฟล์</b> — เช็คโฟลเดอร์ Downloads ของเบราว์เซอร์<br>
+          <b>2. กรณี popup ถูกบล็อก (PDF)</b> — กด <code>🔒</code> ที่ address bar → อนุญาต pop-up<br>
+          <b>3. กรณีเปิดไฟล์โดยตรง (file://) แล้ว Export ไม่ได้</b> — ใช้ลิงก์ <code>holisticprimary.github.io/Farm-Analytics</code> แทน<br>
+          <b>4. กรณี Safari Private Mode</b> — เปลี่ยนเป็น Chrome / Edge หรือเปิดในโหมดปกติ
+        </div>
       </div>
 
       <div class="card dark">
@@ -5434,337 +5381,72 @@ async function renderHistory() {
   };
 }
 
-// ===== js/sync-sheets.js =====
-// ====================================================================
-// FARMSENSE · Google Sheets sync + chart embed
-//
-// One-time setup by the user:
-//   1. Create a Google Sheet
-//   2. Tools → Apps Script → paste the template from
-//      docs/apps-script-template.gs (also shown in the Settings tab)
-//   3. Deploy as Web App (Execute as: me, Access: anyone) → copy URL
-//   4. Insert chart in the sheet → Publish → copy the published URL
-//   5. Paste both URLs into FarmSense Settings tab
-//
-// After setup, every upload silently POSTs one row per house to the
-// Apps Script Web App, which appends the rows to the sheet. The chart
-// in the sheet (and its embed iframe inside FarmSense) update in real
-// time.
-// ====================================================================
-
-const SHEETS_LS_KEYS = {
-  webhookUrl: 'farmsense.sheetsWebhook',
-  chartUrl:   'farmsense.sheetsChart',
-  lastSyncAt: 'farmsense.sheetsLastSync',
-  lastSyncOk: 'farmsense.sheetsLastSyncOk',
-};
-
-function getSheetsConfig() {
-  try {
-    return {
-      webhookUrl: localStorage.getItem(SHEETS_LS_KEYS.webhookUrl) || '',
-      chartUrl:   localStorage.getItem(SHEETS_LS_KEYS.chartUrl)   || '',
-      lastSyncAt: localStorage.getItem(SHEETS_LS_KEYS.lastSyncAt) || '',
-      lastSyncOk: localStorage.getItem(SHEETS_LS_KEYS.lastSyncOk) === '1',
-    };
-  } catch (e) {
-    return { webhookUrl: '', chartUrl: '', lastSyncAt: '', lastSyncOk: false };
-  }
-}
-
-function saveSheetsConfig(patch) {
-  try {
-    if (patch.webhookUrl != null) localStorage.setItem(SHEETS_LS_KEYS.webhookUrl, patch.webhookUrl);
-    if (patch.chartUrl   != null) localStorage.setItem(SHEETS_LS_KEYS.chartUrl,   patch.chartUrl);
-    if (patch.lastSyncAt != null) localStorage.setItem(SHEETS_LS_KEYS.lastSyncAt, patch.lastSyncAt);
-    if (patch.lastSyncOk != null) localStorage.setItem(SHEETS_LS_KEYS.lastSyncOk, patch.lastSyncOk ? '1' : '0');
-  } catch (e) { /* ignore — sandboxed contexts */ }
-}
-
-// Build one flat row per house. The schema must match the column order
-// the Apps Script writes — keep them in sync if you change either side.
-function buildSheetsRows(farmData) {
-  const rows = [];
-  const uploadedAt = new Date().toISOString();
-  const date = farmData.date || uploadedAt.slice(0, 10);
-  for (const h of farmData.houses) {
-    const wf = waterFeedRatio(h);
-    const pctDaily = (h.death_day != null && h.qty_rem)
-      ? (h.death_day / h.qty_rem) * 100
-      : null;
-    rows.push({
-      uploadedAt,
-      farm:  farmData.name || '',
-      round: farmData.round != null ? farmData.round : '',
-      date,
-      house: h.house != null ? String(h.house) : '',
-      age:   h.age,
-      qty_in:  h.qty_in,
-      qty_rem: h.qty_rem,
-      death_day: h.death_day,
-      death_cum: h.death_cum,
-      pct_cum:   h.pct_cum,
-      pct_daily: pctDaily != null ? Number(pctDaily.toFixed(4)) : null,
-      feed_day:  h.feed_day,
-      water:     h.water,
-      wt_age:    h.wt_age,
-      water_feed_ratio: wf ? Number(wf.ratio.toFixed(2)) : null,
-      cull_morning: h.m_culled,
-      cull_evening: h.e_culled,
-      died_morning: h.m_died,
-      died_evening: h.e_died,
-    });
-  }
-  return rows;
-}
-
-// Send rows to the Apps Script Web App.
-//   - Uses `text/plain` to avoid the CORS preflight that Apps Script
-//     can't answer (the preflight returns 403 from script.google.com).
-//   - `mode: 'cors'` is fine for the simple POST itself — Apps Script
-//     returns CORS headers when deployed as "Anyone".
-//   - Returns { ok, rowCount } so the UI can show a tiny toast.
-async function syncToSheets(farmData) {
-  const { webhookUrl } = getSheetsConfig();
-  if (!webhookUrl) return { ok: false, skipped: true, reason: 'no-url' };
-  const rows = buildSheetsRows(farmData);
-  if (rows.length === 0) return { ok: false, skipped: true, reason: 'no-rows' };
-  try {
-    const res = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ rows }),
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    saveSheetsConfig({ lastSyncAt: new Date().toISOString(), lastSyncOk: true });
-    return { ok: true, rowCount: rows.length };
-  } catch (e) {
-    saveSheetsConfig({ lastSyncAt: new Date().toISOString(), lastSyncOk: false });
-    console.warn('Sheets sync failed:', e.message);
-    return { ok: false, error: e.message, rowCount: rows.length };
-  }
-}
-
-// Sync every loaded farm at once — used by the "Sync ทั้งหมดอีกครั้ง"
-// button so the user can backfill after first configuring the webhook.
-async function syncAllFarmsToSheets() {
-  const farmKeys = Object.keys(STATE.farms);
-  let okCount = 0, failCount = 0, totalRows = 0;
-  for (const fk of farmKeys) {
-    const farm = STATE.farms[fk];
-    const result = await syncToSheets(farm);
-    if (result.ok) { okCount++; totalRows += result.rowCount; }
-    else if (!result.skipped) failCount++;
-  }
-  return { okCount, failCount, totalRows };
-}
-
-// ---------- Settings UI ----------
-
-function renderSheetsSettings() {
-  const cfg = getSheetsConfig();
-  const wh = document.getElementById('sheets-webhook-url');
-  const ch = document.getElementById('sheets-chart-url');
-  if (!wh) return;
-  wh.value = cfg.webhookUrl;
-  ch.value = cfg.chartUrl;
-  updateSheetsSyncStatus();
-}
-
-function updateSheetsSyncStatus() {
-  const status = document.getElementById('sheets-sync-status');
-  if (!status) return;
-  const cfg = getSheetsConfig();
-  if (!cfg.webhookUrl) {
-    status.innerHTML = '<span class="dot mute"></span>ยังไม่ได้ตั้งค่า Web App URL';
-    return;
-  }
-  if (!cfg.lastSyncAt) {
-    status.innerHTML = '<span class="dot mute"></span>พร้อมใช้งาน · ยังไม่ได้ sync ครั้งแรก';
-    return;
-  }
-  const when = new Date(cfg.lastSyncAt);
-  const timeStr = when.toLocaleString('th-TH', { hour: '2-digit', minute: '2-digit', day:'numeric', month:'short' });
-  if (cfg.lastSyncOk) {
-    status.innerHTML = `<span class="dot good"></span>Sync ล่าสุดสำเร็จ · ${timeStr}`;
-  } else {
-    status.innerHTML = `<span class="dot bad"></span>Sync ล่าสุดล้มเหลว · ${timeStr} — ตรวจ URL/Deploy permissions`;
-  }
-}
-
-// ---------- Chart embed ----------
-
-// Accept either:
-//   (a) a bare published URL (e.g. https://docs.google.com/spreadsheets/d/.../pubchart?oid=...&format=interactive)
-//   (b) the full <iframe> HTML snippet copied from "Publish to web"
-function normalizeChartUrl(input) {
-  if (!input) return '';
-  const m = input.match(/src="([^"]+)"/);
-  return m ? m[1] : input.trim();
-}
-
-function renderSheetsChartEmbed() {
-  const host = document.getElementById('sheets-chart-embed');
-  if (!host) return;
-  const { chartUrl } = getSheetsConfig();
-  if (!chartUrl) {
-    // No real chart configured yet — show an inline demo so the user
-    // knows what shape they'll get once Sheets is wired up. The demo is
-    // a self-contained SVG so it works offline and never makes network
-    // calls; only the COPY (label) reminds them this is a sample.
-    host.innerHTML = `
-      <div class="card chart-demo-card">
-        <h4>📈 ตัวอย่างกราฟแนวโน้ม <span class="demo-pill">DEMO</span></h4>
-        <div class="card-sub">นี่คือ <b>ตัวอย่าง</b> รูปแบบที่จะเห็นเมื่อเชื่อม Google Sheets แล้ว — ข้อมูลจะเป็นของฟาร์มจริงและอัปเดตทุกวันที่อัปโหลด</div>
-        ${buildDemoTrendChart()}
-        <div class="insight" style="margin-top:14px">
-          💡 วาง URL กราฟในกล่อง 2️⃣ ด้านบน แล้วกราฟจริงจะมาแทนที่ตรงนี้
-        </div>
-      </div>`;
-    return;
-  }
-  const src = normalizeChartUrl(chartUrl);
-  host.innerHTML = `
-    <div class="card">
-      <h4>📈 กราฟแนวโน้มจาก Google Sheets <small style="font-size:11px; color:var(--ink-mute); font-weight:400">· อัปเดต real-time</small></h4>
-      <div class="card-sub">ข้อมูลที่อัปโหลดจะถูก append เข้า Sheet อัตโนมัติ · ปรับรูปแบบกราฟใน Sheets แล้วที่นี่จะตามไปทันที</div>
-      <div class="sheets-embed-wrap">
-        <iframe class="sheets-embed" src="${escapeHtml(src)}" frameborder="0"
-          allowfullscreen
-          sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
-      </div>
-    </div>`;
-}
-
-// Build an inline SVG line-chart that mirrors the shape a real Sheets
-// chart would have once the operator uploads data daily over a round.
-// Pure SVG (no external libs) so it works in any context.
-function buildDemoTrendChart() {
-  // Plot geometry
-  const W = 760, H = 360;
-  const M = { l: 56, r: 24, t: 18, b: 44 };
-  const px = d => M.l + (d / 42) * (W - M.l - M.r);
-  const py = v => H - M.b - (v / 6) * (H - M.t - M.b);
-
-  // Four representative houses pulled from the four real farm files —
-  // each ends at the snapshot's actual %สูญเสียสะสม, with a smooth
-  // back-projection that matches the typical broiler-mortality curve
-  // (steep day 1-7, flat day 8-21, gentle creep day 22-finish).
-  const series = [
-    { name: 'ฟาร์มพีพีฟู้ด · เล้า 2',   color: '#1f6ec0', currentDay: 33, currentPct: 2.59 },
-    { name: 'ฟาร์มยิ่งรวย · เล้า 11',  color: '#d62828', currentDay: 38, currentPct: 5.08 },
-    { name: 'ฟาร์มขวัญใจ · เล้า 11',   color: '#2e7d4f', currentDay: 41, currentPct: 3.06 },
-    { name: 'ฟาร์มพุ่มวงศ์ · เล้า 10',  color: '#c8860b', currentDay: 34, currentPct: 3.59 },
-  ];
-
-  // Generate a curve from day 0..currentDay that ends at currentPct.
-  // Front-load 60% of the loss in days 1-7 (brooding stress), then
-  // grow gently linearly to the final figure.
-  function curve(s) {
-    const pts = [];
-    const earlyEnd = 7, earlyShare = 0.6;
-    const earlyPct = s.currentPct * earlyShare;
-    for (let d = 0; d <= s.currentDay; d++) {
-      let pct;
-      if (d <= earlyEnd) {
-        // S-curve in the first week (slow→fast→slow)
-        const t = d / earlyEnd;
-        const sCurve = t * t * (3 - 2 * t);  // smoothstep
-        pct = earlyPct * sCurve;
-      } else {
-        const t = (d - earlyEnd) / (s.currentDay - earlyEnd);
-        pct = earlyPct + (s.currentPct - earlyPct) * t;
-      }
-      pts.push([d, pct]);
-    }
-    return pts;
-  }
-
-  function pathFromPoints(pts) {
-    return pts.map((p, i) => (i === 0 ? 'M' : 'L') + px(p[0]) + ',' + py(p[1])).join(' ');
-  }
-
-  // Axes — Y gridlines + threshold band
-  const yTicks = [0, 1, 2, 3, 4, 5, 6];
-  const yGrid = yTicks.map(v => `
-    <line x1="${M.l}" x2="${W - M.r}" y1="${py(v)}" y2="${py(v)}"
-          stroke="${v === 3 ? '#d62828' : '#e4e9f0'}"
-          stroke-dasharray="${v === 3 ? '4 4' : '0'}" stroke-width="1"/>
-    <text x="${M.l - 8}" y="${py(v) + 4}" text-anchor="end"
-          font-family="JetBrains Mono, monospace" font-size="10" fill="#8a94a8">${v}%</text>`).join('');
-  const xTicks = [0, 7, 14, 21, 28, 35, 42];
-  const xGrid = xTicks.map(d => `
-    <line x1="${px(d)}" x2="${px(d)}" y1="${py(0)}" y2="${py(0)+4}" stroke="#8a94a8"/>
-    <text x="${px(d)}" y="${py(0)+18}" text-anchor="middle"
-          font-family="JetBrains Mono, monospace" font-size="10" fill="#8a94a8">${d}</text>`).join('');
-
-  // Threshold-band label
-  const thresholdLabel = `
-    <text x="${W - M.r - 4}" y="${py(3) - 6}" text-anchor="end"
-          font-family="IBM Plex Sans Thai, sans-serif" font-size="10"
-          font-weight="600" fill="#d62828">เกณฑ์ 3%</text>`;
-
-  // Series paths + end-point markers
-  const seriesSvg = series.map(s => {
-    const pts = curve(s);
-    const path = pathFromPoints(pts);
-    const last = pts[pts.length - 1];
-    return `
-      <path d="${path}" fill="none" stroke="${s.color}" stroke-width="2.2"
-            stroke-linejoin="round" stroke-linecap="round" opacity="0.95"/>
-      <circle cx="${px(last[0])}" cy="${py(last[1])}" r="4" fill="${s.color}"/>
-      <circle cx="${px(last[0])}" cy="${py(last[1])}" r="7" fill="${s.color}" opacity="0.18"/>`;
-  }).join('');
-
-  // Legend
-  const legend = series.map(s => `
-    <span class="legend-item">
-      <span class="legend-swatch" style="background:${s.color}"></span>
-      ${s.name} <small>· ปัจจุบัน ${s.currentPct.toFixed(2)}% (อายุ ${s.currentDay} วัน)</small>
-    </span>`).join('');
-
-  return `
-    <div class="chart-demo-wrap">
-      <svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"
-           preserveAspectRatio="xMidYMid meet" class="chart-demo-svg" role="img"
-           aria-label="ตัวอย่างกราฟ %ตายสะสมตามอายุไก่">
-        ${yGrid}
-        ${xGrid}
-        ${thresholdLabel}
-        <text x="${M.l - 36}" y="${M.t + 4}" font-family="IBM Plex Sans Thai, sans-serif"
-              font-size="11" font-weight="600" fill="#46526b" transform="rotate(-90 ${M.l - 36} ${M.t + 4})">
-          %ตายสะสม
-        </text>
-        <text x="${W/2}" y="${H - 6}" text-anchor="middle"
-              font-family="IBM Plex Sans Thai, sans-serif" font-size="11" fill="#46526b">
-          อายุไก่ (วัน)
-        </text>
-        ${seriesSvg}
-      </svg>
-      <div class="chart-demo-legend">${legend}</div>
-    </div>`;
-}
-
 // ===== js/exports.js =====
 // ====================================================================
-// FARMSENSE · Exports (JSON, CSV download)
+// FARMSENSE · Exports (JSON / CSV / Word / PDF)
+//
+// All downloads route through downloadFile() which is hardened for:
+//  - Firefox (anchor must be in DOM before .click())
+//  - file:// origins (fallback to data: URI in a new tab)
+//  - permission errors (helpful Thai alert instead of silent failure)
 // ====================================================================
 
 function downloadFile(filename, content, mime) {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 100);
+  let url = null;
+  let a = null;
+  try {
+    const blob = new Blob([content], { type: mime });
+    url = URL.createObjectURL(blob);
+    a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);  // Firefox needs the node in the DOM
+    a.click();
+    setTimeout(() => {
+      try { if (a && a.parentNode) a.parentNode.removeChild(a); } catch (_) {}
+      try { if (url) URL.revokeObjectURL(url); } catch (_) {}
+    }, 2000);
+    return true;
+  } catch (err) {
+    // Fallback path — open as a new tab with the content so the user
+    // can save manually (Ctrl/Cmd+S). Works on stricter file:// setups
+    // where Blob downloads are blocked.
+    try {
+      const isText = mime.startsWith('text/') || mime === 'application/json'
+        || mime === 'application/msword';
+      let href;
+      if (isText) {
+        href = 'data:' + mime + ';charset=utf-8,' + encodeURIComponent(content);
+      } else {
+        href = 'data:' + mime + ';base64,' + btoa(unescape(encodeURIComponent(content)));
+      }
+      const win = window.open(href, '_blank');
+      if (!win) throw new Error('popup blocked');
+      alert('เปิดข้อมูลในแท็บใหม่แล้ว — กด Ctrl/Cmd+S เพื่อบันทึกเป็น "' + filename + '"');
+      return true;
+    } catch (err2) {
+      alert(
+        'Export ไม่สำเร็จ\n\n' +
+        'เหตุผล: ' + (err.message || err) + '\n' +
+        'Fallback: ' + (err2.message || err2) + '\n\n' +
+        'วิธีแก้:\n' +
+        '1. ใช้ Chrome / Edge เปิดเว็บ (ไม่ใช่ Safari Private)\n' +
+        '2. ถ้าเปิดไฟล์โดยตรง (file://) ให้ไปเปิดที่ลิงก์ GitHub Pages แทน\n' +
+        '3. ลองปิด pop-up blocker ของเบราว์เซอร์'
+      );
+      return false;
+    }
+  }
 }
 
+function _dateStr() { return new Date().toISOString().split('T')[0]; }
+
 function exportJSON() {
-  // Strip the internal parsing artifacts (raw rows / header index / labels)
-  // so the export stays a clean analysis snapshot.
   const farms = {};
   for (const [k, f] of Object.entries(STATE.farms)) {
+    // Strip parsing-only fields so the JSON is a clean analysis snapshot.
     const { rows, headerIdx, headerLabels, ...clean } = f;
     farms[k] = clean;
   }
@@ -5773,7 +5455,7 @@ function exportJSON() {
     prices: STATE.prices,
     farms,
   };
-  downloadFile('farmsense-' + new Date().toISOString().split('T')[0] + '.json',
+  downloadFile('farmsense-' + _dateStr() + '.json',
     JSON.stringify(out, null, 2), 'application/json');
 }
 
@@ -5786,7 +5468,8 @@ function exportMortalityCSV() {
       csv += `"${farm.name}","${h.house}",${h.age||''},"${h.source||''}",${h.density||''},${h.qty_in||''},${h.qty_rem||''},${h.death_day||''},${h.death_cum||''},${h.pct_cum||''},${diag.priority}\n`;
     }
   }
-  downloadFile('mortality-' + new Date().toISOString().split('T')[0] + '.csv', '﻿' + csv, 'text/csv;charset=utf-8');
+  // UTF-8 BOM keeps Excel happy with Thai characters.
+  downloadFile('mortality-' + _dateStr() + '.csv', '﻿' + csv, 'text/csv;charset=utf-8');
 }
 
 function exportFeedCSV() {
@@ -5800,7 +5483,364 @@ function exportFeedCSV() {
       }
     }
   }
-  downloadFile('feed-' + new Date().toISOString().split('T')[0] + '.csv', '﻿' + csv, 'text/csv;charset=utf-8');
+  downloadFile('feed-' + _dateStr() + '.csv', '﻿' + csv, 'text/csv;charset=utf-8');
+}
+
+// ====================================================================
+// Word report — generated as Office-flavoured HTML saved with a .doc
+// extension. Word opens it like a native document; tables, headings,
+// and colours all carry over. No external libs required.
+// ====================================================================
+
+function _esc(v) {
+  if (v == null) return '';
+  return String(v).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function _num(v, d = 0) {
+  if (v == null) return '–';
+  return Number(v).toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: d });
+}
+function _pct(v, d = 2) { return v == null ? '–' : v.toFixed(d) + '%'; }
+
+// Build the body HTML used by both Word and Print exports.
+function buildReportBody() {
+  const farmKeys = Object.keys(STATE.farms);
+  if (farmKeys.length === 0) {
+    return '<p style="color:#888">ยังไม่มีข้อมูล — อัปโหลดใบหน้าเล้าก่อน</p>';
+  }
+
+  const dateThai = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
+
+  // ---------- Farm-wide KPIs ----------
+  let totalIn = 0, totalDead = 0, totalRem = 0, totalDeadToday = 0, totalHouses = 0, criticalHouses = 0;
+  for (const fk of farmKeys) {
+    for (const h of STATE.farms[fk].houses) {
+      totalIn += h.qty_in || 0;
+      totalDead += h.death_cum || 0;
+      totalRem += h.qty_rem || 0;
+      totalDeadToday += h.death_day || 0;
+      totalHouses++;
+      if ((h.pct_cum || 0) >= 4) criticalHouses++;
+    }
+  }
+  const avgPct = totalIn > 0 ? (totalDead / totalIn) * 100 : 0;
+  const dailyRate = totalRem > 0 ? (totalDeadToday / totalRem) * 100 : 0;
+
+  let html = `
+    <h1 style="font-size:22pt; color:#16284a; margin-bottom:2pt;">รายงานวิเคราะห์ฟาร์มไก่ · FarmSense</h1>
+    <p style="font-size:11pt; color:#666; margin-top:0;">วันที่รายงาน: ${_esc(dateThai)}</p>
+    <hr style="border:none; border-top:2px solid #16284a; margin:12pt 0;">
+
+    <h2 style="font-size:16pt; color:#16284a;">§ 1 ภาพรวม</h2>
+    <table style="width:100%; border-collapse:collapse; margin-bottom:12pt;">
+      <tr>
+        <td style="border:1px solid #ccc; padding:8pt; width:25%;">
+          <div style="font-size:9pt; color:#888;">ไก่คงเหลือรวม</div>
+          <div style="font-size:18pt; font-weight:bold; color:#16284a;">${_num(totalRem)}</div>
+          <div style="font-size:9pt; color:#888;">จาก ${_num(totalIn)} ที่ลง</div>
+        </td>
+        <td style="border:1px solid #ccc; padding:8pt; width:25%;">
+          <div style="font-size:9pt; color:#888;">ตายสะสมรวม</div>
+          <div style="font-size:18pt; font-weight:bold; color:${avgPct > 2 ? '#c8860b' : '#2e7d4f'};">${_num(totalDead)}</div>
+          <div style="font-size:9pt; color:#888;">${_pct(avgPct)} (เกณฑ์ &lt; 3%)</div>
+        </td>
+        <td style="border:1px solid #ccc; padding:8pt; width:25%;">
+          <div style="font-size:9pt; color:#888;">ตายวันนี้</div>
+          <div style="font-size:18pt; font-weight:bold;">${_num(totalDeadToday)}</div>
+          <div style="font-size:9pt; color:${dailyRate >= 0.1 ? '#d62828' : '#888'};">${dailyRate.toFixed(3)}%/วัน · เกณฑ์ 0.10%</div>
+        </td>
+        <td style="border:1px solid #ccc; padding:8pt; width:25%;">
+          <div style="font-size:9pt; color:#888;">เล้าที่ %ตายสะสม &gt; 4%</div>
+          <div style="font-size:18pt; font-weight:bold; color:${criticalHouses > 0 ? '#d62828' : '#2e7d4f'};">${criticalHouses}</div>
+          <div style="font-size:9pt; color:#888;">จาก ${totalHouses} เล้า · ${farmKeys.length} ฟาร์ม</div>
+        </td>
+      </tr>
+    </table>`;
+
+  // ---------- Risk Board ----------
+  const scored = [];
+  for (const fk of farmKeys) {
+    const farm = STATE.farms[fk];
+    for (const h of farm.houses) {
+      scored.push({ h, r: houseRiskScore(h, farm.houses), farmName: farm.name });
+    }
+  }
+  const risky = scored.filter(s => s.r.level !== 'OK').sort((a, b) => b.r.score - a.r.score);
+  const LEVEL_LBL = { CRITICAL: 'วิกฤต', HIGH: 'เสี่ยงสูง', WATCH: 'เฝ้าระวัง' };
+  const LEVEL_COLOR = { CRITICAL: '#d62828', HIGH: '#c8860b', WATCH: '#2e7d4f' };
+  html += `<h2 style="font-size:16pt; color:#16284a; page-break-before:auto;">§ 2 เล้าที่ต้องดูวันนี้</h2>`;
+  if (risky.length === 0) {
+    html += `<p style="color:#2e7d4f;">✓ ทุกเล้าอยู่ในเกณฑ์ปกติ</p>`;
+  } else {
+    html += `
+      <table style="width:100%; border-collapse:collapse; margin-bottom:12pt; font-size:10pt;">
+        <thead>
+          <tr style="background:#16284a; color:#fff;">
+            <th style="border:1px solid #ccc; padding:6pt;">อันดับ</th>
+            <th style="border:1px solid #ccc; padding:6pt;">ฟาร์ม/เล้า</th>
+            <th style="border:1px solid #ccc; padding:6pt;">อายุ</th>
+            <th style="border:1px solid #ccc; padding:6pt;">ระดับ</th>
+            <th style="border:1px solid #ccc; padding:6pt;">เหตุผล &amp; สิ่งที่ต้องเช็ค</th>
+          </tr>
+        </thead>
+        <tbody>`;
+    risky.forEach((s, i) => {
+      const reasons = s.r.reasons.map(x => '• ' + _esc(x.reason)).join('<br>');
+      html += `
+        <tr>
+          <td style="border:1px solid #ccc; padding:6pt; text-align:center;">${i+1}</td>
+          <td style="border:1px solid #ccc; padding:6pt;">${_esc(s.farmName.replace('ฟาร์ม',''))} · เล้า ${_esc(String(s.h.house))}</td>
+          <td style="border:1px solid #ccc; padding:6pt; text-align:center;">${s.h.age != null ? s.h.age : '–'}</td>
+          <td style="border:1px solid #ccc; padding:6pt; color:${LEVEL_COLOR[s.r.level]}; font-weight:bold;">${LEVEL_LBL[s.r.level]}</td>
+          <td style="border:1px solid #ccc; padding:6pt;">${reasons}</td>
+        </tr>`;
+    });
+    html += `</tbody></table>`;
+  }
+
+  // ---------- Per-farm summary ----------
+  html += `<h2 style="font-size:16pt; color:#16284a;">§ 3 สรุปต่อเล้า</h2>`;
+  for (const fk of farmKeys) {
+    const farm = STATE.farms[fk];
+    html += `
+      <h3 style="font-size:13pt; color:#1f4e79; margin-top:14pt;">${_esc(farm.name)}${farm.round ? ' · รุ่น ' + farm.round : ''}</h3>
+      <table style="width:100%; border-collapse:collapse; margin-bottom:10pt; font-size:10pt;">
+        <thead>
+          <tr style="background:#16284a; color:#fff;">
+            <th style="border:1px solid #ccc; padding:5pt;">เล้า</th>
+            <th style="border:1px solid #ccc; padding:5pt;">อายุ</th>
+            <th style="border:1px solid #ccc; padding:5pt;">ที่มา</th>
+            <th style="border:1px solid #ccc; padding:5pt;">ยอดลง</th>
+            <th style="border:1px solid #ccc; padding:5pt;">คงเหลือ</th>
+            <th style="border:1px solid #ccc; padding:5pt;">ตายวันนี้</th>
+            <th style="border:1px solid #ccc; padding:5pt;">ตายสะสม</th>
+            <th style="border:1px solid #ccc; padding:5pt;">%ตายสะสม</th>
+            <th style="border:1px solid #ccc; padding:5pt;">น.น. (kg)</th>
+          </tr>
+        </thead>
+        <tbody>`;
+    for (const h of farm.houses) {
+      const pct = h.pct_cum || 0;
+      const pctColor = pct >= 3 ? '#d62828' : pct >= 2.5 ? '#c8860b' : '#2e7d4f';
+      html += `
+        <tr>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:center;">${_esc(String(h.house))}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:center;">${h.age != null ? h.age : '–'}</td>
+          <td style="border:1px solid #ccc; padding:5pt; font-size:9pt;">${_esc(h.source || '–')}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${_num(h.qty_in)}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${_num(h.qty_rem)}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${_num(h.death_day)}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${_num(h.death_cum)}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:${pctColor}; font-weight:bold;">${_pct(pct)}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${h.wt_age != null ? h.wt_age.toFixed(3) : '–'}</td>
+        </tr>`;
+    }
+    html += `</tbody></table>`;
+  }
+
+  // ---------- AM/PM cull pattern ----------
+  html += `<h2 style="font-size:16pt; color:#16284a; page-break-before:auto;">§ 4 รูปแบบ ตาย/คัด เช้า·เย็น</h2>`;
+  html += `
+    <table style="width:100%; border-collapse:collapse; margin-bottom:12pt; font-size:10pt;">
+      <thead>
+        <tr style="background:#16284a; color:#fff;">
+          <th style="border:1px solid #ccc; padding:5pt;">ฟาร์ม/เล้า</th>
+          <th style="border:1px solid #ccc; padding:5pt;">ตายจริง</th>
+          <th style="border:1px solid #ccc; padding:5pt;">คัด</th>
+          <th style="border:1px solid #ccc; padding:5pt;">เช้า</th>
+          <th style="border:1px solid #ccc; padding:5pt;">เย็น</th>
+          <th style="border:1px solid #ccc; padding:5pt;">รูปแบบ</th>
+        </tr>
+      </thead>
+      <tbody>`;
+  for (const fk of farmKeys) {
+    const farm = STATE.farms[fk];
+    for (const h of farm.houses) {
+      const b = mortalityBreakdown(h);
+      if (!b) continue;
+      const patternLbl = b.pattern === 'HEAT' ? 'เย็นหนัก · heat stress'
+                       : b.pattern === 'NIGHT' ? 'เช้าหนัก · หนาว/กลางคืน' : 'สม่ำเสมอ';
+      const patternColor = b.pattern === 'HEAT' ? '#d62828'
+                         : b.pattern === 'NIGHT' ? '#c8860b' : '#2e7d4f';
+      html += `
+        <tr>
+          <td style="border:1px solid #ccc; padding:5pt;">${_esc(farm.name.replace('ฟาร์ม',''))} · เล้า ${_esc(String(h.house))}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:#d62828;">${_num(b.died)}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:#2e7d4f;">${_num(b.culled)}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${_num(b.morning)}</td>
+          <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${_num(b.evening)}</td>
+          <td style="border:1px solid #ccc; padding:5pt; color:${patternColor}; font-weight:bold;">${patternLbl}</td>
+        </tr>`;
+    }
+  }
+  html += `</tbody></table>`;
+
+  // ---------- Weekly weight + ADG + FCR ----------
+  html += `<h2 style="font-size:16pt; color:#16284a; page-break-before:auto;">§ 5 น้ำหนัก · ADG · FCR รายสัปดาห์ (เทียบ Ross 308)</h2>`;
+  let hasAny = false;
+  for (const fk of farmKeys) {
+    const farm = STATE.farms[fk];
+    for (const h of farm.houses) {
+      const w = weeklyWeightAnalysis(h);
+      if (!w) continue;
+      hasAny = true;
+      const overallLbl = w.overall === 'BAD' ? '🚨 ต่ำกว่าเกณฑ์'
+                       : w.overall === 'WARN' ? '⚠ ต้องเฝ้าระวัง' : '✓ ตามเกณฑ์';
+      const overallColor = w.overall === 'BAD' ? '#d62828'
+                         : w.overall === 'WARN' ? '#c8860b' : '#2e7d4f';
+      html += `
+        <h3 style="font-size:12pt; color:#1f4e79; margin-top:12pt;">
+          ${_esc(farm.name.replace('ฟาร์ม',''))} · เล้า ${_esc(String(h.house))}
+          <span style="font-size:10pt; font-weight:normal; color:#888;">· อายุ ${h.age != null ? h.age : '–'} วัน · แรกเข้า ${(w.initial*1000).toFixed(0)} ก.
+          · <span style="color:${overallColor}; font-weight:bold;">${overallLbl}</span></span>
+        </h3>
+        <table style="width:100%; border-collapse:collapse; margin-bottom:10pt; font-size:10pt;">
+          <thead>
+            <tr style="background:#eef2f7; color:#16284a;">
+              <th style="border:1px solid #ccc; padding:5pt;">วันที่ชั่ง</th>
+              <th style="border:1px solid #ccc; padding:5pt;">น.น. (kg)</th>
+              <th style="border:1px solid #ccc; padding:5pt;">× แรกเข้า</th>
+              <th style="border:1px solid #ccc; padding:5pt;">ADG จริง (g/วัน)</th>
+              <th style="border:1px solid #ccc; padding:5pt;">ADG Ross</th>
+              <th style="border:1px solid #ccc; padding:5pt;">Δ ADG</th>
+              <th style="border:1px solid #ccc; padding:5pt;">FCR จริง</th>
+              <th style="border:1px solid #ccc; padding:5pt;">FCR Ross</th>
+              <th style="border:1px solid #ccc; padding:5pt;">Δ FCR</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      w.rows.forEach(r => {
+        const adgColor = r.adgStatus === 'SLOW' ? '#d62828' : r.adgStatus === 'FAST' ? '#2e7d4f' : '#16284a';
+        const fcrColor = r.fcrStatus === 'POOR' ? '#d62828' : r.fcrStatus === 'GREAT' ? '#2e7d4f' : '#16284a';
+        const ratioColor = r.ratioVsInitial < 4.5 ? '#d62828' : '#2e7d4f';
+        html += `
+          <tr>
+            <td style="border:1px solid #ccc; padding:5pt; font-weight:bold;">Day ${r.day}</td>
+            <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.weight.toFixed(3)}</td>
+            <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:${ratioColor};">${r.ratioVsInitial.toFixed(1)}×</td>
+            <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:${adgColor}; font-weight:bold;">${r.adgActual.toFixed(0)}</td>
+            <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.adgRoss != null ? r.adgRoss.toFixed(0) : '–'}</td>
+            <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.adgDiffPct != null ? (r.adgDiffPct >= 0 ? '+' : '') + r.adgDiffPct.toFixed(0) + '%' : '–'}</td>
+            <td style="border:1px solid #ccc; padding:5pt; text-align:right; color:${fcrColor}; font-weight:bold;">${r.fcrActual != null ? r.fcrActual.toFixed(2) : '–'}</td>
+            <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.fcrRoss != null ? r.fcrRoss.toFixed(2) : '–'}</td>
+            <td style="border:1px solid #ccc; padding:5pt; text-align:right;">${r.fcrDiffPct != null ? (r.fcrDiffPct >= 0 ? '+' : '') + r.fcrDiffPct.toFixed(0) + '%' : '–'}</td>
+          </tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+  }
+  if (!hasAny) {
+    html += `<p style="color:#888;">ไม่มีข้อมูลการชั่งน้ำหนักรายสัปดาห์ในไฟล์</p>`;
+  }
+
+  html += `
+    <hr style="margin-top:20pt; border:none; border-top:1px solid #ccc;">
+    <p style="font-size:9pt; color:#888; text-align:center;">
+      FarmSense · ระบบวิเคราะห์ฟาร์มไก่ · รายงานสร้างเมื่อ ${_esc(new Date().toLocaleString('th-TH'))}
+    </p>`;
+
+  return html;
+}
+
+// Export as Word — uses Microsoft's "HTML in .doc" trick. Word reads
+// it as a native document; the document.xml + style.css ride along
+// inside the file. Page size A4, Sarabun-friendly font stack.
+function exportWordReport() {
+  const body = buildReportBody();
+  const doc = `<html xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<title>FarmSense Report</title>
+<!--[if gte mso 9]>
+<xml>
+  <w:WordDocument>
+    <w:View>Print</w:View>
+    <w:Zoom>100</w:Zoom>
+    <w:DoNotOptimizeForBrowser/>
+  </w:WordDocument>
+</xml>
+<![endif]-->
+<style>
+@page Section1 { size: 21.0cm 29.7cm; margin: 2.0cm 1.5cm 2.0cm 1.5cm; mso-page-orientation: portrait; }
+div.Section1 { page: Section1; }
+body { font-family: "TH Sarabun New", "Sarabun", "Tahoma", sans-serif; font-size: 12pt; color: #1a2233; }
+h1, h2, h3 { font-family: "TH Sarabun New", "Sarabun", "Tahoma", sans-serif; }
+table { border-collapse: collapse; }
+</style>
+</head>
+<body>
+<div class="Section1">
+${body}
+</div>
+</body>
+</html>`;
+  downloadFile('farmsense-report-' + _dateStr() + '.doc', doc, 'application/msword');
+}
+
+// PDF export — opens the report in a fresh popup window styled for
+// print, then triggers the browser's print dialog. The user picks
+// "Save as PDF" as the destination. We use a separate window so the
+// main app keeps its loaded state and doesn't need a reload.
+function exportPdfReport() {
+  if (Object.keys(STATE.farms).length === 0) {
+    alert('ยังไม่มีข้อมูล — อัปโหลดใบหน้าเล้าก่อน');
+    return;
+  }
+  const win = window.open('', '_blank', 'width=900,height=1200');
+  if (!win) {
+    alert('เปิด print preview ไม่ได้ — โปรดอนุญาต pop-up สำหรับเว็บนี้');
+    return;
+  }
+  const body = buildReportBody();
+  // The popup gets its own minimal stylesheet so it prints cleanly
+  // regardless of how the main app is loaded (file:// or hosted).
+  const printDoc = `<!DOCTYPE html>
+<html lang="th"><head>
+<meta charset="utf-8">
+<title>FarmSense Report</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4 portrait; margin: 18mm 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: 'Sarabun', 'TH Sarabun New', 'Tahoma', sans-serif;
+         font-size: 11pt; color: #1a2233; margin: 0; padding: 0; line-height: 1.5; }
+  h1 { font-size: 22pt; color: #16284a; margin: 0 0 4pt; }
+  h2 { font-size: 15pt; color: #16284a; margin: 16pt 0 6pt; page-break-after: avoid; }
+  h3 { font-size: 12pt; color: #1f4e79; margin: 10pt 0 4pt; page-break-after: avoid; }
+  table { width: 100%; border-collapse: collapse; page-break-inside: avoid; }
+  th, td { border: 1px solid #ccc; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+  th { background: #16284a; color: #fff; font-weight: 600; }
+  tr { page-break-inside: avoid; }
+  hr { border: none; border-top: 1px solid #ccc; margin: 10pt 0; }
+  @media print {
+    .no-print { display: none !important; }
+  }
+  .no-print {
+    position: fixed; top: 12px; right: 12px;
+    background: #16284a; color: #fff; padding: 8px 14px;
+    border-radius: 999px; font-size: 12pt; cursor: pointer;
+    border: 0; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+  }
+</style>
+</head><body>
+<button class="no-print" onclick="window.print()">🖨 พิมพ์ / Save as PDF</button>
+${body}
+<script>
+  // Wait for fonts to load so PDF picks up Sarabun rather than fallback.
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => setTimeout(() => window.print(), 400));
+  } else {
+    setTimeout(() => window.print(), 800);
+  }
+</script>
+</body></html>`;
+  win.document.open();
+  win.document.write(printDoc);
+  win.document.close();
 }
 
 // ===== js/main.js =====
@@ -5932,13 +5972,6 @@ async function handleFiles(files) {
       saveSnapshot(farmData)
         .then(() => renderHistory())
         .catch(e => console.warn('บันทึกประวัติไม่สำเร็จ:', e.message));
-      // auto-sync to Google Sheets if configured (silent — never blocks upload)
-      if (typeof syncToSheets === 'function') {
-        syncToSheets(farmData).then(result => {
-          if (typeof updateSheetsSyncStatus === 'function') updateSheetsSyncStatus();
-          if (result.ok) console.info(`Sheets sync: +${result.rowCount} rows`);
-        });
-      }
     } catch (err) {
       item.className = 'file-item error';
       item.innerHTML = `
@@ -5998,93 +6031,12 @@ document.querySelectorAll('.tab').forEach(tab => {
 document.getElementById('exp-json').onclick = exportJSON;
 document.getElementById('exp-mort-csv').onclick = exportMortalityCSV;
 document.getElementById('exp-feed-csv').onclick = exportFeedCSV;
+document.getElementById('exp-pdf').onclick = exportPdfReport;
+document.getElementById('exp-word').onclick = exportWordReport;
 
 // ========== INIT ==========
 
 document.getElementById('header-date').textContent = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-
-// ========== SETTINGS TAB · Google Sheets sync ==========
-// Wire up Settings tab inputs + load the Apps Script template into the
-// page so the operator can copy it without leaving the app.
-(function initSheetsSettings() {
-  const wh = document.getElementById('sheets-webhook-url');
-  const ch = document.getElementById('sheets-chart-url');
-  if (!wh || !ch) return;
-
-  renderSheetsSettings();
-  renderSheetsChartEmbed();
-
-  // Load the Apps Script template file (best-effort — fall back to a
-  // copyable hint if served from file:// where fetch may not work).
-  fetch('docs/apps-script-template.gs')
-    .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)))
-    .then(code => { document.getElementById('apps-script-code').textContent = code; })
-    .catch(() => {
-      document.getElementById('apps-script-code').textContent =
-        '// ไม่สามารถโหลด apps-script-template.gs ได้ — เปิดไฟล์โดยตรงที่:\n' +
-        '// farmsense/docs/apps-script-template.gs';
-    });
-
-  // Save handler — strips whitespace, persists, and refreshes the
-  // status pill + the chart embed so the user sees the change at once.
-  document.getElementById('sheets-save-btn').onclick = () => {
-    saveSheetsConfig({
-      webhookUrl: wh.value.trim(),
-      chartUrl: ch.value.trim(),
-    });
-    updateSheetsSyncStatus();
-    renderSheetsChartEmbed();
-    flashStatus('✓ บันทึกแล้ว', 'good');
-  };
-
-  // Test connection — POSTs a heartbeat row so the user gets a real
-  // green/red light, not just a happy "saved" toast.
-  document.getElementById('sheets-test-btn').onclick = async () => {
-    const url = wh.value.trim();
-    if (!url) { flashStatus('⚠ ยังไม่ได้กรอก URL', 'warn'); return; }
-    saveSheetsConfig({ webhookUrl: url });
-    const probeFarm = {
-      name: '__test__', round: null, date: new Date().toISOString().slice(0,10),
-      houses: [{ house: 'TEST', age: 0, qty_in: 0, qty_rem: 0,
-                 death_day: 0, death_cum: 0, pct_cum: 0 }],
-    };
-    const res = await syncToSheets(probeFarm);
-    if (res.ok) flashStatus(`✓ เชื่อมต่อสำเร็จ (+${res.rowCount} แถวทดสอบ)`, 'good');
-    else        flashStatus(`✗ ล้มเหลว: ${res.error || 'unknown'}`, 'bad');
-    updateSheetsSyncStatus();
-  };
-
-  // Re-sync everything currently loaded — useful after first-time setup.
-  document.getElementById('sheets-sync-all-btn').onclick = async () => {
-    if (Object.keys(STATE.farms).length === 0) {
-      flashStatus('⚠ ยังไม่มีฟาร์มที่โหลด — อัปโหลดไฟล์ก่อน', 'warn');
-      return;
-    }
-    const r = await syncAllFarmsToSheets();
-    flashStatus(`Sync เสร็จ · ${r.okCount} ฟาร์ม · +${r.totalRows} แถว · ล้มเหลว ${r.failCount}`,
-                r.failCount === 0 ? 'good' : 'warn');
-    updateSheetsSyncStatus();
-  };
-
-  // Copy-to-clipboard for the Apps Script template.
-  document.getElementById('apps-script-copy-btn').onclick = async () => {
-    const code = document.getElementById('apps-script-code').textContent;
-    try {
-      await navigator.clipboard.writeText(code);
-      flashStatus('✓ Copy โค้ดเรียบร้อย — paste ใน Apps Script editor ได้เลย', 'good');
-    } catch (e) {
-      flashStatus('⚠ Copy ไม่สำเร็จ — เลือกข้อความใน <pre> แล้ว Ctrl+C', 'warn');
-    }
-  };
-
-  function flashStatus(msg, kind) {
-    const el = document.getElementById('sheets-sync-status');
-    if (!el) return;
-    const dot = kind === 'good' ? 'good' : kind === 'bad' ? 'bad' : 'warn';
-    el.innerHTML = `<span class="dot ${dot}"></span>${escapeHtml(msg)}`;
-    setTimeout(updateSheetsSyncStatus, 4000);
-  }
-})();
 
 // Inject the configured mortality thresholds into the Alerts-tab lede so
 // the displayed numbers always match MORTALITY_THRESHOLDS in constants.js.

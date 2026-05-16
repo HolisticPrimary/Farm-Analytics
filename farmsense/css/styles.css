@@ -581,6 +581,8 @@ table tbody tr.std { background: var(--surface-2); font-weight: 500; }
 .export-btn:hover { background: var(--blue); transform: translateY(-1px); box-shadow: var(--shadow-md); }
 .export-btn.sec { background: var(--surface); color: var(--ink); border: 1px solid var(--border-2); }
 .export-btn.sec:hover { background: var(--blue-bg); color: var(--blue-dark); border-color: var(--blue-soft); }
+.export-btn.primary { background: var(--blue); }
+.export-btn.primary:hover { background: var(--blue-dark); }
 .export-grid { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 
 /* ============ FOOTER ============ */

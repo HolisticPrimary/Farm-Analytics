@@ -126,13 +126,6 @@ async function handleFiles(files) {
       saveSnapshot(farmData)
         .then(() => renderHistory())
         .catch(e => console.warn('บันทึกประวัติไม่สำเร็จ:', e.message));
-      // auto-sync to Google Sheets if configured (silent — never blocks upload)
-      if (typeof syncToSheets === 'function') {
-        syncToSheets(farmData).then(result => {
-          if (typeof updateSheetsSyncStatus === 'function') updateSheetsSyncStatus();
-          if (result.ok) console.info(`Sheets sync: +${result.rowCount} rows`);
-        });
-      }
     } catch (err) {
       item.className = 'file-item error';
       item.innerHTML = `
@@ -192,93 +185,12 @@ document.querySelectorAll('.tab').forEach(tab => {
 document.getElementById('exp-json').onclick = exportJSON;
 document.getElementById('exp-mort-csv').onclick = exportMortalityCSV;
 document.getElementById('exp-feed-csv').onclick = exportFeedCSV;
+document.getElementById('exp-pdf').onclick = exportPdfReport;
+document.getElementById('exp-word').onclick = exportWordReport;
 
 // ========== INIT ==========
 
 document.getElementById('header-date').textContent = new Date().toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
-
-// ========== SETTINGS TAB · Google Sheets sync ==========
-// Wire up Settings tab inputs + load the Apps Script template into the
-// page so the operator can copy it without leaving the app.
-(function initSheetsSettings() {
-  const wh = document.getElementById('sheets-webhook-url');
-  const ch = document.getElementById('sheets-chart-url');
-  if (!wh || !ch) return;
-
-  renderSheetsSettings();
-  renderSheetsChartEmbed();
-
-  // Load the Apps Script template file (best-effort — fall back to a
-  // copyable hint if served from file:// where fetch may not work).
-  fetch('docs/apps-script-template.gs')
-    .then(r => r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status)))
-    .then(code => { document.getElementById('apps-script-code').textContent = code; })
-    .catch(() => {
-      document.getElementById('apps-script-code').textContent =
-        '// ไม่สามารถโหลด apps-script-template.gs ได้ — เปิดไฟล์โดยตรงที่:\n' +
-        '// farmsense/docs/apps-script-template.gs';
-    });
-
-  // Save handler — strips whitespace, persists, and refreshes the
-  // status pill + the chart embed so the user sees the change at once.
-  document.getElementById('sheets-save-btn').onclick = () => {
-    saveSheetsConfig({
-      webhookUrl: wh.value.trim(),
-      chartUrl: ch.value.trim(),
-    });
-    updateSheetsSyncStatus();
-    renderSheetsChartEmbed();
-    flashStatus('✓ บันทึกแล้ว', 'good');
-  };
-
-  // Test connection — POSTs a heartbeat row so the user gets a real
-  // green/red light, not just a happy "saved" toast.
-  document.getElementById('sheets-test-btn').onclick = async () => {
-    const url = wh.value.trim();
-    if (!url) { flashStatus('⚠ ยังไม่ได้กรอก URL', 'warn'); return; }
-    saveSheetsConfig({ webhookUrl: url });
-    const probeFarm = {
-      name: '__test__', round: null, date: new Date().toISOString().slice(0,10),
-      houses: [{ house: 'TEST', age: 0, qty_in: 0, qty_rem: 0,
-                 death_day: 0, death_cum: 0, pct_cum: 0 }],
-    };
-    const res = await syncToSheets(probeFarm);
-    if (res.ok) flashStatus(`✓ เชื่อมต่อสำเร็จ (+${res.rowCount} แถวทดสอบ)`, 'good');
-    else        flashStatus(`✗ ล้มเหลว: ${res.error || 'unknown'}`, 'bad');
-    updateSheetsSyncStatus();
-  };
-
-  // Re-sync everything currently loaded — useful after first-time setup.
-  document.getElementById('sheets-sync-all-btn').onclick = async () => {
-    if (Object.keys(STATE.farms).length === 0) {
-      flashStatus('⚠ ยังไม่มีฟาร์มที่โหลด — อัปโหลดไฟล์ก่อน', 'warn');
-      return;
-    }
-    const r = await syncAllFarmsToSheets();
-    flashStatus(`Sync เสร็จ · ${r.okCount} ฟาร์ม · +${r.totalRows} แถว · ล้มเหลว ${r.failCount}`,
-                r.failCount === 0 ? 'good' : 'warn');
-    updateSheetsSyncStatus();
-  };
-
-  // Copy-to-clipboard for the Apps Script template.
-  document.getElementById('apps-script-copy-btn').onclick = async () => {
-    const code = document.getElementById('apps-script-code').textContent;
-    try {
-      await navigator.clipboard.writeText(code);
-      flashStatus('✓ Copy โค้ดเรียบร้อย — paste ใน Apps Script editor ได้เลย', 'good');
-    } catch (e) {
-      flashStatus('⚠ Copy ไม่สำเร็จ — เลือกข้อความใน <pre> แล้ว Ctrl+C', 'warn');
-    }
-  };
-
-  function flashStatus(msg, kind) {
-    const el = document.getElementById('sheets-sync-status');
-    if (!el) return;
-    const dot = kind === 'good' ? 'good' : kind === 'bad' ? 'bad' : 'warn';
-    el.innerHTML = `<span class="dot ${dot}"></span>${escapeHtml(msg)}`;
-    setTimeout(updateSheetsSyncStatus, 4000);
-  }
-})();
 
 // Inject the configured mortality thresholds into the Alerts-tab lede so
 // the displayed numbers always match MORTALITY_THRESHOLDS in constants.js.
