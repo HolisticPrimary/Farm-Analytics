@@ -3201,19 +3201,18 @@ function renderRiskBoard(farmKeys) {
       <td><b>${i+1}</b></td>
       <td><span class="pill ${fc}">${escapeHtml(s.farmName.replace('ฟาร์ม',''))}</span> <b>${h.house}</b></td>
       <td class="mono">${h.age != null ? h.age : '–'}</td>
-      <td class="mono"><b style="font-size:16px">${r.score}</b></td>
       <td><span class="pill ${LEVEL_PILL[r.level]}">${LEVEL_LABEL[r.level]}</span></td>
       <td style="font-size:12px; line-height:1.55">${reasonsHtml}${vacTag}</td>
     </tr>`;
   }).join('');
 
   board.innerHTML = vacHtml + `
-    <p class="lede" style="margin-bottom:12px">${risky.length} เล้าต้องเฝ้าระวัง — เรียงตามคะแนนความเสี่ยงรวม (สังเคราะห์จากทุกสัญญาณ) · คะแนนสูง = ด่วนกว่า</p>
+    <p class="lede" style="margin-bottom:12px">${risky.length} เล้าต้องเฝ้าระวัง — เรียงตามความเสี่ยงรวม (สังเคราะห์จากทุกสัญญาณ) · เรียงด่วนสุดบนสุด</p>
     <div class="table-wrap">
       <table>
         <thead><tr>
           <th>อันดับ</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
-          <th>คะแนน</th><th>ระดับ</th><th>เหตุผล &amp; สิ่งที่ต้องเช็ค</th>
+          <th>ระดับ</th><th>เหตุผล &amp; สิ่งที่ต้องเช็ค</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
