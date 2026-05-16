@@ -91,14 +91,13 @@ function renderHealth(farmKeys) {
         <td>${pill(h)}</td>
         <td class="mono pct-c">${fmtNum(b.died)}</td>
         <td class="mono">${fmtNum(b.culled)}</td>
-        <td class="pct">${b.cullRate.toFixed(0)}%</td>
         <td class="mono">${fmtNum(b.morning)}</td>
         <td class="mono">${fmtNum(b.evening)}</td>
         <td><span class="pill ${PATTERN_PILL[b.pattern]}">${PATTERN_LABEL[b.pattern]}</span></td>
       </tr>`;
     }).join('');
   document.getElementById('cull-tbody').innerHTML = cullRows ||
-    emptyRow(8, 'ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"');
+    emptyRow(7, 'ไม่มีข้อมูลแยก ตาย/คัด เช้า/เย็น — ไฟล์ Excel อาจไม่มีคอลัมน์ย่อย "ไก่ตาย/ไก่คัด"');
 
   // ---------- 7C · actual weight vs mixed-sex standard (Ross 308 secondary) ----------
   const weightRows = wv
