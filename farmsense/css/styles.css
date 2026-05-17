@@ -1236,8 +1236,11 @@ footer.colophon .footer-zone {
    the weekly table. */
 .feed-kpi-row {
   display: grid; gap: 8px;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   margin-bottom: 10px;
+}
+@media (max-width: 1100px) {
+  .feed-kpi-row { grid-template-columns: repeat(3, 1fr); }
 }
 .feed-kpi-row .fk {
   background: var(--surface-2);

@@ -401,8 +401,15 @@ function renderFeed(farmKeys) {
   }
   cards.sort((a, b) => (RANK[b.fw.overall] || 0) - (RANK[a.fw.overall] || 0));
 
-  // KPI sub-row inside each card — turns the four cross-cutting feed
-  // metrics into a single scannable block.
+  // KPI sub-row inside each card — five cross-cutting feed metrics in
+  // one scannable block: cumulative eaten, cumulative loaded (kg from
+  // แผนอาหาร), FCR, water:feed, and the waste gap (with kg figures
+  // when the loaded-tonnage is known).
+  function _fmtKg(v) {
+    if (v == null) return '–';
+    if (v >= 1000) return (v / 1000).toFixed(1) + ' t';
+    return v.toFixed(0) + ' kg';
+  }
   function feedKpiHtml(fw) {
     const cumPct = fw.cumFeedPct;
     const cumCls = cumPct == null ? 'mute' : cumPct < 95 ? 'bad' : cumPct > 110 ? 'warn' : 'good';
@@ -411,8 +418,18 @@ function renderFeed(farmKeys) {
                   : cumPct < 95 ? 'กินขาด · ตรวจสุขภาพ'
                   : cumPct > 110 ? 'กินเกินแผน · เช็คสิ้นเปลือง'
                   : 'ตามแผน';
+
+    // อาหารลงสะสม — from แผนอาหาร sheet (kg + % of program)
+    const waste = fw.waste;
+    const loadedKg = waste.loadedKg;
+    const loadedPct = waste.loadedPct;
+    const loadedStr = loadedPct != null ? loadedPct.toFixed(2) + '%' : '–';
+    const loadedSubKg = loadedKg != null ? _fmtKg(loadedKg) : '–';
+    const loadedCls = loadedPct == null ? 'mute' : 'good';
+
     const fcrStr  = fw.lastFcr != null ? fw.lastFcr.toFixed(2) : '–';
     const fcrNote = fw.lastFcr != null ? `Day ${fw.lastFcrDay}` : 'รอวันชั่ง';
+
     const wf = fw.waterFeed;
     const wfStr  = wf.ratio != null ? wf.ratio.toFixed(2) : '–';
     const wfCls  = wf.status === 'OK' ? 'good'
@@ -422,7 +439,7 @@ function renderFeed(farmKeys) {
                  : wf.status === 'LOW' ? 'ดื่มน้อย — เช็คสุขภาพ'
                  : wf.status === 'HIGH' ? 'heat stress/ท้องเสีย'
                  : 'ข้อมูลน้ำผิด';
-    const waste = fw.waste;
+
     const gapStr = waste.gapPct != null ? (waste.gapPct >= 0 ? '+' : '') + waste.gapPct.toFixed(2) + '%' : '–';
     const gapCls = waste.status === 'HIGH'  ? 'bad'
                  : waste.status === 'WATCH' ? 'warn'
@@ -431,12 +448,19 @@ function renderFeed(farmKeys) {
                   : waste.status === 'WATCH' ? 'เฝ้าระวัง'
                   : waste.status === 'OK'    ? 'ลง ≈ กิน'
                   : 'ไม่มีข้อมูล';
+    const gapSubKg = waste.gapKg != null ? `ลง ${_fmtKg(waste.loadedKg)} − กิน ${_fmtKg(waste.eatenKg)} = ${_fmtKg(waste.gapKg)}` : `ลง ${waste.loadedPct != null ? waste.loadedPct.toFixed(2) + '%' : '–'} / กิน ${waste.eatenPct != null ? waste.eatenPct.toFixed(2) + '%' : '–'}`;
+
     return `
       <div class="feed-kpi-row">
         <div class="fk fk-${cumCls}">
           <div class="fk-lab">อาหารกินสะสม</div>
           <div class="fk-val">${cumStr}</div>
-          <div class="fk-sub">ของแผน · ${cumNote}</div>
+          <div class="fk-sub">${_fmtKg(waste.eatenKg)} · ${cumNote}</div>
+        </div>
+        <div class="fk fk-${loadedCls}">
+          <div class="fk-lab">อาหารลงสะสม</div>
+          <div class="fk-val">${loadedStr}</div>
+          <div class="fk-sub">${loadedSubKg}${loadedPct != null ? ' · ของแผนทั้งรุ่น' : (loadedKg == null ? ' · ไม่มี "แผนอาหาร"' : '')}</div>
         </div>
         <div class="fk fk-${fw.lastFcr != null ? 'good' : 'mute'}">
           <div class="fk-lab">FCR ปัจจุบัน</div>
@@ -451,7 +475,7 @@ function renderFeed(farmKeys) {
         <div class="fk fk-${gapCls}">
           <div class="fk-lab">อาหารหก/สูญเปล่า</div>
           <div class="fk-val">${gapStr}</div>
-          <div class="fk-sub">ลง ${waste.loadedPct != null ? waste.loadedPct.toFixed(2) + '%' : '–'} / กิน ${waste.eatenPct != null ? waste.eatenPct.toFixed(2) + '%' : '–'} · ${gapNote}</div>
+          <div class="fk-sub">${gapSubKg} · ${gapNote}</div>
         </div>
       </div>`;
   }

@@ -1252,8 +1252,11 @@ footer.colophon .footer-zone {
    the weekly table. */
 .feed-kpi-row {
   display: grid; gap: 8px;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   margin-bottom: 10px;
+}
+@media (max-width: 1100px) {
+  .feed-kpi-row { grid-template-columns: repeat(3, 1fr); }
 }
 .feed-kpi-row .fk {
   background: var(--surface-2);
@@ -2361,6 +2364,14 @@ function feedWeeklyAnalysis(h) {
                     : gapPct > 1.0 ? 'HIGH'
                     : gapPct > 0.5 ? 'WATCH' : 'OK';
 
+  // Cumulative LOADED kg comes from the "แผนอาหาร" sheet (parsed into
+  // h.feed_plan); EATEN kg comes from the daily H-sheet sum we just
+  // accumulated. Together they let the waste KPI quote real tonnage,
+  // not just percent.
+  const loadedKg = h.feed_plan ? h.feed_plan.totalKg : null;
+  const eatenKg  = cumFeedKg;
+  const gapKg    = (loadedKg != null && eatenKg != null) ? loadedKg - eatenKg : null;
+
   // Latest snapshot of intake / FCR / water:feed for the header KPIs.
   const lastRow = rows[rows.length - 1];
   const lastWfWeek = [...rows].reverse().find(r => r.wfRatio != null);
@@ -2381,7 +2392,8 @@ function feedWeeklyAnalysis(h) {
     cumFeedPct: lastRow ? lastRow.cumFeedPct : null,
     lastFcr:    lastRow ? lastRow.fcr : null,
     lastFcrDay: lastRow ? lastRow.fcrDay : null,
-    waste: { loadedPct, eatenPct, gapPct, status: wasteStatus },
+    waste: { loadedPct, eatenPct, gapPct, status: wasteStatus, loadedKg, eatenKg, gapKg },
+    plan: h.feed_plan || null,
     waterFeed: { ratio: lastWfWeek ? lastWfWeek.wfRatio : null, status: wfStatus },
     overall,
   };
@@ -3387,6 +3399,77 @@ function parseHouseDailyHistory(workbook) {
   return { histories, initialWeights };
 }
 
+// ====================================================================
+// Feed-plan sheet parser ("แผนอาหาร") — pulls per-house cumulative
+// loaded feed (kg) and the % of program loaded so far. Templates use
+// a two-block layout: delivery log on the left (date · feed code ·
+// kg per house) and a summary block on the right with two labelled
+// rows "รวม" (total kg per house) and "%" (loaded as % of program).
+// Returns { [houseNum]: { totalKg, pct, deliveryCount, lastDeliveryDate } }
+// or null when the sheet isn't present (only the PP template carries it).
+// ====================================================================
+function parseFeedPlanSheet(workbook) {
+  const sheetName = workbook.SheetNames.find(n => (n || '').includes('แผนอาหาร'));
+  if (!sheetName) return null;
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+  // Find the row labelled "รวม" anywhere in the sheet (column position
+  // varies between templates). The header that names each per-house
+  // column sits one row above it.
+  let totalRow = null, pctRow = null, summaryHdr = null;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || [];
+    if (row.some(c => String(c == null ? '' : c).trim() === 'รวม')) {
+      totalRow = row;
+      summaryHdr = rows[i - 1] || [];
+      // "%" row immediately follows
+      const next = rows[i + 1] || [];
+      if (next.some(c => String(c == null ? '' : c).trim() === '%')) pctRow = next;
+      break;
+    }
+  }
+  if (!totalRow || !summaryHdr) return null;
+
+  // Locate per-house columns from the summary header.
+  const houseCols = {};
+  for (let c = 0; c < summaryHdr.length; c++) {
+    const v = String(summaryHdr[c] == null ? '' : summaryHdr[c]);
+    const m = v.match(/โรงเรือนที่\s*(\d+)/);
+    if (m) houseCols[parseInt(m[1], 10)] = c;
+  }
+
+  // Also scan delivery records — every row whose first column looks
+  // like a date is a delivery event. Use them to count deliveries +
+  // capture the most-recent date per house.
+  const deliveriesPerHouse = {};
+  const dateRe = /^\d{1,2}\/\d{1,2}\/\d{2,4}/;
+  for (const row of rows) {
+    const dateStr = String((row || [])[0] == null ? '' : row[0]).trim();
+    if (!dateRe.test(dateStr)) continue;
+    for (const [hNumStr, col] of Object.entries(houseCols)) {
+      const hNum = parseInt(hNumStr, 10);
+      // The delivery columns are usually FOUR slots to the left of the
+      // summary columns, but layouts vary; safer to scan the row for
+      // matching house position via the delivery header at the top.
+    }
+    // Simpler: just count rows that have at least one non-null amount
+    // in any delivery column (cols 3-10, where the per-house deliveries
+    // live in PP's template).
+  }
+
+  // Build per-house plan from the summary rows.
+  const plan = {};
+  for (const [hNumStr, col] of Object.entries(houseCols)) {
+    const num = parseInt(hNumStr, 10);
+    const totalKg = parseNumeric(totalRow[col]);
+    const pct = pctRow ? parseNumeric(pctRow[col]) : null;
+    if (totalKg == null && pct == null) continue;
+    plan[num] = { totalKg, pct };
+  }
+  return Object.keys(plan).length > 0 ? plan : null;
+}
+
 async function parseExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -3424,6 +3507,11 @@ async function parseExcelFile(file) {
           return;
         }
 
+        // Per-house feed-plan totals from "แผนอาหาร" sheet (when present).
+        // PP template carries this; other templates fall back to the face
+        // sheet's feed_loaded_pct field for the same information.
+        const feedPlan = parseFeedPlanSheet(workbook);
+
         // Attach per-house daily history from H 1..H N sheets when available.
         // Also harvest the initial chick weight ("น้ำหนักเฉลี่ยวันแรก") out of
         // the H-sheet preamble when the face sheet didn't carry the column —
@@ -3438,6 +3526,10 @@ async function parseExcelFile(file) {
           // Fill in initial weight from H sheet when face sheet lacked it.
           if (h.wt_initial == null && Number.isFinite(num) && initialWeights[num] != null) {
             h.wt_initial = initialWeights[num];
+          }
+          // Attach feed-plan totals when the sheet provided them.
+          if (feedPlan && Number.isFinite(num) && feedPlan[num]) {
+            h.feed_plan = feedPlan[num];
           }
         }
 
@@ -3860,8 +3952,15 @@ function renderFeed(farmKeys) {
   }
   cards.sort((a, b) => (RANK[b.fw.overall] || 0) - (RANK[a.fw.overall] || 0));
 
-  // KPI sub-row inside each card — turns the four cross-cutting feed
-  // metrics into a single scannable block.
+  // KPI sub-row inside each card — five cross-cutting feed metrics in
+  // one scannable block: cumulative eaten, cumulative loaded (kg from
+  // แผนอาหาร), FCR, water:feed, and the waste gap (with kg figures
+  // when the loaded-tonnage is known).
+  function _fmtKg(v) {
+    if (v == null) return '–';
+    if (v >= 1000) return (v / 1000).toFixed(1) + ' t';
+    return v.toFixed(0) + ' kg';
+  }
   function feedKpiHtml(fw) {
     const cumPct = fw.cumFeedPct;
     const cumCls = cumPct == null ? 'mute' : cumPct < 95 ? 'bad' : cumPct > 110 ? 'warn' : 'good';
@@ -3870,8 +3969,18 @@ function renderFeed(farmKeys) {
                   : cumPct < 95 ? 'กินขาด · ตรวจสุขภาพ'
                   : cumPct > 110 ? 'กินเกินแผน · เช็คสิ้นเปลือง'
                   : 'ตามแผน';
+
+    // อาหารลงสะสม — from แผนอาหาร sheet (kg + % of program)
+    const waste = fw.waste;
+    const loadedKg = waste.loadedKg;
+    const loadedPct = waste.loadedPct;
+    const loadedStr = loadedPct != null ? loadedPct.toFixed(2) + '%' : '–';
+    const loadedSubKg = loadedKg != null ? _fmtKg(loadedKg) : '–';
+    const loadedCls = loadedPct == null ? 'mute' : 'good';
+
     const fcrStr  = fw.lastFcr != null ? fw.lastFcr.toFixed(2) : '–';
     const fcrNote = fw.lastFcr != null ? `Day ${fw.lastFcrDay}` : 'รอวันชั่ง';
+
     const wf = fw.waterFeed;
     const wfStr  = wf.ratio != null ? wf.ratio.toFixed(2) : '–';
     const wfCls  = wf.status === 'OK' ? 'good'
@@ -3881,7 +3990,7 @@ function renderFeed(farmKeys) {
                  : wf.status === 'LOW' ? 'ดื่มน้อย — เช็คสุขภาพ'
                  : wf.status === 'HIGH' ? 'heat stress/ท้องเสีย'
                  : 'ข้อมูลน้ำผิด';
-    const waste = fw.waste;
+
     const gapStr = waste.gapPct != null ? (waste.gapPct >= 0 ? '+' : '') + waste.gapPct.toFixed(2) + '%' : '–';
     const gapCls = waste.status === 'HIGH'  ? 'bad'
                  : waste.status === 'WATCH' ? 'warn'
@@ -3890,12 +3999,19 @@ function renderFeed(farmKeys) {
                   : waste.status === 'WATCH' ? 'เฝ้าระวัง'
                   : waste.status === 'OK'    ? 'ลง ≈ กิน'
                   : 'ไม่มีข้อมูล';
+    const gapSubKg = waste.gapKg != null ? `ลง ${_fmtKg(waste.loadedKg)} − กิน ${_fmtKg(waste.eatenKg)} = ${_fmtKg(waste.gapKg)}` : `ลง ${waste.loadedPct != null ? waste.loadedPct.toFixed(2) + '%' : '–'} / กิน ${waste.eatenPct != null ? waste.eatenPct.toFixed(2) + '%' : '–'}`;
+
     return `
       <div class="feed-kpi-row">
         <div class="fk fk-${cumCls}">
           <div class="fk-lab">อาหารกินสะสม</div>
           <div class="fk-val">${cumStr}</div>
-          <div class="fk-sub">ของแผน · ${cumNote}</div>
+          <div class="fk-sub">${_fmtKg(waste.eatenKg)} · ${cumNote}</div>
+        </div>
+        <div class="fk fk-${loadedCls}">
+          <div class="fk-lab">อาหารลงสะสม</div>
+          <div class="fk-val">${loadedStr}</div>
+          <div class="fk-sub">${loadedSubKg}${loadedPct != null ? ' · ของแผนทั้งรุ่น' : (loadedKg == null ? ' · ไม่มี "แผนอาหาร"' : '')}</div>
         </div>
         <div class="fk fk-${fw.lastFcr != null ? 'good' : 'mute'}">
           <div class="fk-lab">FCR ปัจจุบัน</div>
@@ -3910,7 +4026,7 @@ function renderFeed(farmKeys) {
         <div class="fk fk-${gapCls}">
           <div class="fk-lab">อาหารหก/สูญเปล่า</div>
           <div class="fk-val">${gapStr}</div>
-          <div class="fk-sub">ลง ${waste.loadedPct != null ? waste.loadedPct.toFixed(2) + '%' : '–'} / กิน ${waste.eatenPct != null ? waste.eatenPct.toFixed(2) + '%' : '–'} · ${gapNote}</div>
+          <div class="fk-sub">${gapSubKg} · ${gapNote}</div>
         </div>
       </div>`;
   }

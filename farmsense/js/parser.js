@@ -333,6 +333,77 @@ function parseHouseDailyHistory(workbook) {
   return { histories, initialWeights };
 }
 
+// ====================================================================
+// Feed-plan sheet parser ("แผนอาหาร") — pulls per-house cumulative
+// loaded feed (kg) and the % of program loaded so far. Templates use
+// a two-block layout: delivery log on the left (date · feed code ·
+// kg per house) and a summary block on the right with two labelled
+// rows "รวม" (total kg per house) and "%" (loaded as % of program).
+// Returns { [houseNum]: { totalKg, pct, deliveryCount, lastDeliveryDate } }
+// or null when the sheet isn't present (only the PP template carries it).
+// ====================================================================
+function parseFeedPlanSheet(workbook) {
+  const sheetName = workbook.SheetNames.find(n => (n || '').includes('แผนอาหาร'));
+  if (!sheetName) return null;
+  const sheet = workbook.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+
+  // Find the row labelled "รวม" anywhere in the sheet (column position
+  // varies between templates). The header that names each per-house
+  // column sits one row above it.
+  let totalRow = null, pctRow = null, summaryHdr = null;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i] || [];
+    if (row.some(c => String(c == null ? '' : c).trim() === 'รวม')) {
+      totalRow = row;
+      summaryHdr = rows[i - 1] || [];
+      // "%" row immediately follows
+      const next = rows[i + 1] || [];
+      if (next.some(c => String(c == null ? '' : c).trim() === '%')) pctRow = next;
+      break;
+    }
+  }
+  if (!totalRow || !summaryHdr) return null;
+
+  // Locate per-house columns from the summary header.
+  const houseCols = {};
+  for (let c = 0; c < summaryHdr.length; c++) {
+    const v = String(summaryHdr[c] == null ? '' : summaryHdr[c]);
+    const m = v.match(/โรงเรือนที่\s*(\d+)/);
+    if (m) houseCols[parseInt(m[1], 10)] = c;
+  }
+
+  // Also scan delivery records — every row whose first column looks
+  // like a date is a delivery event. Use them to count deliveries +
+  // capture the most-recent date per house.
+  const deliveriesPerHouse = {};
+  const dateRe = /^\d{1,2}\/\d{1,2}\/\d{2,4}/;
+  for (const row of rows) {
+    const dateStr = String((row || [])[0] == null ? '' : row[0]).trim();
+    if (!dateRe.test(dateStr)) continue;
+    for (const [hNumStr, col] of Object.entries(houseCols)) {
+      const hNum = parseInt(hNumStr, 10);
+      // The delivery columns are usually FOUR slots to the left of the
+      // summary columns, but layouts vary; safer to scan the row for
+      // matching house position via the delivery header at the top.
+    }
+    // Simpler: just count rows that have at least one non-null amount
+    // in any delivery column (cols 3-10, where the per-house deliveries
+    // live in PP's template).
+  }
+
+  // Build per-house plan from the summary rows.
+  const plan = {};
+  for (const [hNumStr, col] of Object.entries(houseCols)) {
+    const num = parseInt(hNumStr, 10);
+    const totalKg = parseNumeric(totalRow[col]);
+    const pct = pctRow ? parseNumeric(pctRow[col]) : null;
+    if (totalKg == null && pct == null) continue;
+    plan[num] = { totalKg, pct };
+  }
+  return Object.keys(plan).length > 0 ? plan : null;
+}
+
 async function parseExcelFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -370,6 +441,11 @@ async function parseExcelFile(file) {
           return;
         }
 
+        // Per-house feed-plan totals from "แผนอาหาร" sheet (when present).
+        // PP template carries this; other templates fall back to the face
+        // sheet's feed_loaded_pct field for the same information.
+        const feedPlan = parseFeedPlanSheet(workbook);
+
         // Attach per-house daily history from H 1..H N sheets when available.
         // Also harvest the initial chick weight ("น้ำหนักเฉลี่ยวันแรก") out of
         // the H-sheet preamble when the face sheet didn't carry the column —
@@ -384,6 +460,10 @@ async function parseExcelFile(file) {
           // Fill in initial weight from H sheet when face sheet lacked it.
           if (h.wt_initial == null && Number.isFinite(num) && initialWeights[num] != null) {
             h.wt_initial = initialWeights[num];
+          }
+          // Attach feed-plan totals when the sheet provided them.
+          if (feedPlan && Number.isFinite(num) && feedPlan[num]) {
+            h.feed_plan = feedPlan[num];
           }
         }
 

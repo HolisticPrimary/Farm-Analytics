@@ -310,6 +310,14 @@ function feedWeeklyAnalysis(h) {
                     : gapPct > 1.0 ? 'HIGH'
                     : gapPct > 0.5 ? 'WATCH' : 'OK';
 
+  // Cumulative LOADED kg comes from the "แผนอาหาร" sheet (parsed into
+  // h.feed_plan); EATEN kg comes from the daily H-sheet sum we just
+  // accumulated. Together they let the waste KPI quote real tonnage,
+  // not just percent.
+  const loadedKg = h.feed_plan ? h.feed_plan.totalKg : null;
+  const eatenKg  = cumFeedKg;
+  const gapKg    = (loadedKg != null && eatenKg != null) ? loadedKg - eatenKg : null;
+
   // Latest snapshot of intake / FCR / water:feed for the header KPIs.
   const lastRow = rows[rows.length - 1];
   const lastWfWeek = [...rows].reverse().find(r => r.wfRatio != null);
@@ -330,7 +338,8 @@ function feedWeeklyAnalysis(h) {
     cumFeedPct: lastRow ? lastRow.cumFeedPct : null,
     lastFcr:    lastRow ? lastRow.fcr : null,
     lastFcrDay: lastRow ? lastRow.fcrDay : null,
-    waste: { loadedPct, eatenPct, gapPct, status: wasteStatus },
+    waste: { loadedPct, eatenPct, gapPct, status: wasteStatus, loadedKg, eatenKg, gapKg },
+    plan: h.feed_plan || null,
     waterFeed: { ratio: lastWfWeek ? lastWfWeek.wfRatio : null, status: wfStatus },
     overall,
   };
