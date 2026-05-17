@@ -223,6 +223,119 @@ function weeklyWeightAnalysis(h) {
   return { initial, rows, overall };
 }
 
+// Build a WEEKLY feed breakdown for §03. Aggregates the day-by-day
+// H-sheet data into 7-day buckets (Day 1-7, 8-14, ...) and folds in:
+//   - n้ำ:อาหาร ratio for the week (litres ÷ kg, only when daily water
+//     records look sensible — broken templates store 14, 15 l/day which
+//     is physically impossible for a full house so we filter)
+//   - FCR snapshot for the week (whichever weighing landed inside the
+//     7-day window, usually the last day of the week)
+//   - cumulative feed % vs the farm program plan
+// Header carries the face-sheet feed-loaded vs feed-eaten gap so the
+// "อาหารหก/สูญเปล่า" badge moves out of §07D into the same card.
+function feedWeeklyAnalysis(h) {
+  if (!h.dailyHistory || h.dailyHistory.length === 0) return null;
+
+  // Bucket daily records by week number.
+  const buckets = new Map();
+  for (const d of h.dailyHistory) {
+    const wk = Math.ceil(d.day / 7);
+    if (!buckets.has(wk)) buckets.set(wk, {
+      week: wk, days: [], feedKg: 0, planKg: 0,
+      sumG: 0, sumStd: 0, sumGCount: 0,
+      waterSum: 0, waterCount: 0,
+      lastFcr: null, lastFcrDay: null,
+    });
+    const b = buckets.get(wk);
+    b.days.push(d.day);
+    if (d.feed_used != null) b.feedKg += d.feed_used;
+    const stdG = farmFeedLookup(d.day);
+    if (stdG != null && d.qty_rem) {
+      b.planKg += (stdG * d.qty_rem) / 1000;
+    }
+    if (d.feed_used != null && d.qty_rem && d.qty_rem > 0 && stdG != null) {
+      b.sumG += (d.feed_used * 1000) / d.qty_rem;
+      b.sumStd += stdG;
+      b.sumGCount++;
+    }
+    // Water values < 200 l/day are physically impossible for a house of
+    // thousands of birds (a bird drinks 100-400 ml/day), so we treat them
+    // as data-entry errors and skip them when forming the ratio.
+    if (d.water != null && d.water >= 200) {
+      b.waterSum += d.water;
+      b.waterCount++;
+    }
+    if (d.fcr != null && d.fcr > 0) {
+      b.lastFcr = d.fcr;
+      b.lastFcrDay = d.day;
+    }
+  }
+
+  const weeks = [...buckets.values()].sort((a, b) => a.week - b.week);
+
+  // Per-week summary (averages + status)
+  let cumFeedKg = 0, cumPlanKg = 0;
+  const rows = weeks.map(b => {
+    const avgG   = b.sumGCount > 0 ? b.sumG / b.sumGCount : null;
+    const avgStd = b.sumGCount > 0 ? b.sumStd / b.sumGCount : null;
+    const devPct = avgStd ? ((avgG - avgStd) / avgStd) * 100 : null;
+    const status = devPct == null ? null
+                : devPct < -5 ? 'LOW'
+                : devPct >  5 ? 'HIGH' : 'NORMAL';
+    // Water-to-feed ratio for the week: total water (l) ÷ total feed (kg).
+    // Only computed when at least one valid water record exists.
+    const wfRatio = (b.waterCount > 0 && b.feedKg > 0) ? b.waterSum / b.feedKg : null;
+    cumFeedKg += b.feedKg;
+    cumPlanKg += b.planKg;
+    return {
+      week: b.week,
+      dayFrom: b.days[0],
+      dayTo: b.days[b.days.length - 1],
+      feedKg: b.feedKg,
+      avgG, avgStd, devPct, status,
+      wfRatio,
+      fcr: b.lastFcr,
+      fcrDay: b.lastFcrDay,
+      cumFeedKg,
+      cumPlanKg,
+      cumFeedPct: cumPlanKg > 0 ? (cumFeedKg / cumPlanKg) * 100 : null,
+    };
+  });
+
+  // Face-sheet feed-loaded vs feed-eaten — same data 7D used to expose.
+  const loadedPct = h.feed_loaded_pct;
+  const eatenPct  = h.feed_pct;
+  const gapPct = (loadedPct != null && eatenPct != null) ? loadedPct - eatenPct : null;
+  const wasteStatus = gapPct == null ? null
+                    : gapPct > 1.0 ? 'HIGH'
+                    : gapPct > 0.5 ? 'WATCH' : 'OK';
+
+  // Latest snapshot of intake / FCR / water:feed for the header KPIs.
+  const lastRow = rows[rows.length - 1];
+  const lastWfWeek = [...rows].reverse().find(r => r.wfRatio != null);
+  const wfStatus = lastWfWeek == null ? 'BADDATA'
+                : lastWfWeek.wfRatio < 1.5 ? 'LOW'
+                : lastWfWeek.wfRatio > 2.4 ? 'HIGH' : 'OK';
+
+  // Overall card status: drives the border colour.
+  const anyBadWeek = rows.some(r => r.devPct != null && r.devPct < -10);
+  const anyLowWeek = rows.some(r => r.status === 'LOW');
+  const overall = anyBadWeek || wasteStatus === 'HIGH' ? 'BAD'
+                : anyLowWeek || wasteStatus === 'WATCH' ? 'WARN'
+                : 'GOOD';
+
+  return {
+    rows,
+    cumFeedKg, cumPlanKg,
+    cumFeedPct: lastRow ? lastRow.cumFeedPct : null,
+    lastFcr:    lastRow ? lastRow.fcr : null,
+    lastFcrDay: lastRow ? lastRow.fcrDay : null,
+    waste: { loadedPct, eatenPct, gapPct, status: wasteStatus },
+    waterFeed: { ratio: lastWfWeek ? lastWfWeek.wfRatio : null, status: wfStatus },
+    overall,
+  };
+}
+
 // Build the day-by-day feed breakdown the §03 card consumes.
 // For every day in the H-sheet history we compute:
 //   - feed_kg used that day

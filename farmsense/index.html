@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20260516q">
+<link rel="stylesheet" href="css/styles.css?v=20260516r">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -164,9 +164,9 @@
 
     <!-- TAB: FEED -->
     <div class="tab-content" id="tab-feed">
-      <h2 class="sec"><span class="num">§ 03</span> อาหาร vs เกณฑ์ฟาร์ม · รายวัน + FCR</h2>
+      <h2 class="sec"><span class="num">§ 03</span> อาหาร · รายสัปดาห์ · ครบวงจร</h2>
       <div class="sec-rule"></div>
-      <p class="lede">การ์ดละ 1 เล้า · ตารางรายวันแสดง <b>g/ตัว/วัน</b> เทียบเกณฑ์ฟาร์ม + <b>FCR</b> ทุกวันที่ชั่ง + <b>%อาหารกินสะสม</b> เทียบแผน</p>
+      <p class="lede">การ์ดละ 1 เล้า · สรุปรายสัปดาห์ + 4 KPI: <b>%กินสะสม</b> · <b>FCR</b> · <b>น้ำ:อาหาร</b> · <b>อาหารหก/สูญเปล่า</b></p>
 
       <div class="kpi-row" id="feed-kpi"></div>
 
@@ -237,53 +237,20 @@
     <div class="tab-content" id="tab-health">
       <h2 class="sec"><span class="num">§ 07</span> สุขภาพรายวัน &amp; การเติบโต</h2>
       <div class="sec-rule"></div>
-      <p class="lede">ข้อมูลที่ดึงเพิ่มจากใบหน้าเล้า — น้ำ:อาหาร, แยกตายจริง/คัด, รูปแบบเช้า/เย็น, น้ำหนักจริงเทียบเกณฑ์ 4.5× ของแรกเข้า, อาหารหก/สูญเปล่า</p>
+      <p class="lede">ข้อมูลสุขภาพและการเติบโตที่ดึงจากใบหน้าเล้า — แยกตายจริง/คัด·รูปแบบเช้า/เย็น + น้ำหนัก/ADG/FCR รายสัปดาห์เทียบ Ross 308 · <small>(น้ำ:อาหาร + อาหารหก/สูญเปล่า ย้ายไปแท็บ "อาหาร vs STD")</small></p>
 
       <div class="kpi-row" id="health-kpi"></div>
 
       <div class="card">
-        <h4>7A · อัตราส่วน น้ำ : อาหาร</h4>
-        <div class="card-sub">มาตรฐาน 1.5–2.4 · ต่ำ = ไก่ดื่มน้ำน้อย (อาจป่วย) · สูง = heat stress / ท้องเสีย — สัญญาณเตือนเบอร์ 1</div>
-        <div class="table-wrap">
-          <table id="water-table">
-            <thead>
-              <tr>
-                <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
-                <th>น้ำ (ล.)</th><th>อาหาร (kg)</th><th>น้ำ:อาหาร</th>
-                <th>สถานะ</th><th>คำแนะนำ</th>
-              </tr>
-            </thead>
-            <tbody id="water-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h4>7B · แยก "ตายจริง" vs "คัด" + รูปแบบ เช้า/เย็น</h4>
+        <h4>7A · แยก "ตายจริง" vs "คัด" + รูปแบบ เช้า/เย็น</h4>
         <div class="card-sub">คัด = การจัดการเชิงรุก (ดี) · ตายจริง = สูญเสียคุมไม่ได้ (แย่) · ตายเย็นเยอะ = heat stress</div>
         <div class="cull-cards" id="cull-cards"></div>
       </div>
 
       <div class="card">
-        <h4>7C · น้ำหนัก / ADG / FCR รายสัปดาห์ <small style="font-size:11px; color:var(--ink-mute); font-weight:400">· เทียบ Ross 308 คละเพศ + กฎ ≥ 4.5× แรกเข้า</small></h4>
+        <h4>7B · น้ำหนัก / ADG / FCR รายสัปดาห์ <small style="font-size:11px; color:var(--ink-mute); font-weight:400">· เทียบ Ross 308 คละเพศ + กฎ ≥ 4.5× แรกเข้า</small></h4>
         <div class="card-sub">ทุกครั้งที่ชั่ง (สัปดาห์) เทียบ <b>ADG จริง</b> กับ Ross 308 ในช่วงเดียวกัน + <b>FCR สะสม</b> กับ Ross 308 · เกณฑ์ฟาร์ม: น้ำหนักต้อง ≥ 4.5× แรกเข้าทุกครั้ง</div>
         <div id="weight-cards" class="wk-cards"></div>
-      </div>
-
-      <div class="card">
-        <h4>7D · อาหารหก/สูญเปล่า (ลงสะสม vs กินสะสม)</h4>
-        <div class="card-sub">ช่องว่างระหว่าง %อาหารที่ลงเล้า กับ %อาหารที่ไก่กินจริง = อาหารที่ไม่ถึงปากไก่ (เงินรั่ว)</div>
-        <div class="table-wrap">
-          <table id="waste-table">
-            <thead>
-              <tr>
-                <th>#</th><th>ฟาร์ม/เล้า</th><th>%อาหารลงสะสม</th>
-                <th>%อาหารกินสะสม</th><th>ช่องว่าง</th><th>สถานะ</th>
-              </tr>
-            </thead>
-            <tbody id="waste-tbody"></tbody>
-          </table>
-        </div>
       </div>
     </div>
 
@@ -380,21 +347,21 @@
 </main>
 
 <!-- ====== Application scripts (load order matters) ====== -->
-<script src="js/constants.js?v=20260516q"></script>
-<script src="js/state.js?v=20260516q"></script>
-<script src="js/ui-helpers.js?v=20260516q"></script>
-<script src="js/analyzers.js?v=20260516q"></script>
-<script src="js/analyzers-alerts.js?v=20260516q"></script>
-<script src="js/schema-map.js?v=20260516q"></script>
-<script src="js/history.js?v=20260516q"></script>
-<script src="js/parser.js?v=20260516q"></script>
-<script src="js/render.js?v=20260516q"></script>
-<script src="js/render-health.js?v=20260516q"></script>
-<script src="js/render-alerts.js?v=20260516q"></script>
-<script src="js/render-analysis.js?v=20260516q"></script>
-<script src="js/render-history.js?v=20260516q"></script>
-<script src="js/exports.js?v=20260516q"></script>
-<script src="js/main.js?v=20260516q"></script>
+<script src="js/constants.js?v=20260516r"></script>
+<script src="js/state.js?v=20260516r"></script>
+<script src="js/ui-helpers.js?v=20260516r"></script>
+<script src="js/analyzers.js?v=20260516r"></script>
+<script src="js/analyzers-alerts.js?v=20260516r"></script>
+<script src="js/schema-map.js?v=20260516r"></script>
+<script src="js/history.js?v=20260516r"></script>
+<script src="js/parser.js?v=20260516r"></script>
+<script src="js/render.js?v=20260516r"></script>
+<script src="js/render-health.js?v=20260516r"></script>
+<script src="js/render-alerts.js?v=20260516r"></script>
+<script src="js/render-analysis.js?v=20260516r"></script>
+<script src="js/render-history.js?v=20260516r"></script>
+<script src="js/exports.js?v=20260516r"></script>
+<script src="js/main.js?v=20260516r"></script>
 
 </body>
 </html>

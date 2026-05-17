@@ -1230,6 +1230,45 @@ footer.colophon .footer-zone {
   .wk-card .wk-table { font-size: 11px; }
 }
 
+/* ============ §03 FEED CARD · IN-CARD KPI SUB-ROW ============ */
+/* Four cross-cutting feed metrics (cumulative %, FCR, water:feed,
+   waste gap) sit in a compact 4-up grid between the card header and
+   the weekly table. */
+.feed-kpi-row {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 10px;
+}
+.feed-kpi-row .fk {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  border-left: 3px solid var(--ink-mute);
+}
+.feed-kpi-row .fk-good { border-left-color: var(--green); }
+.feed-kpi-row .fk-warn { border-left-color: var(--amber); }
+.feed-kpi-row .fk-bad  { border-left-color: var(--red); }
+.feed-kpi-row .fk-mute { border-left-color: var(--ink-mute); }
+.feed-kpi-row .fk-lab {
+  font-size: 10px; color: var(--ink-mute);
+  font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.feed-kpi-row .fk-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px; font-weight: 700;
+  color: var(--ink); margin-top: 2px;
+}
+.feed-kpi-row .fk-good .fk-val { color: var(--green); }
+.feed-kpi-row .fk-warn .fk-val { color: var(--amber); }
+.feed-kpi-row .fk-bad  .fk-val { color: var(--red); }
+.feed-kpi-row .fk-sub {
+  font-size: 10px; color: var(--ink-mute); margin-top: 2px;
+  line-height: 1.4;
+}
+@media (max-width: 720px) {
+  .feed-kpi-row { grid-template-columns: 1fr 1fr; }
+}
+
 /* ============ 7B · CULL CARDS (Health tab) ============ */
 /* Same visual language as the Daily Overview house-cards so the operator
    scans 7B the same way: status colour on the left, big numbers in the

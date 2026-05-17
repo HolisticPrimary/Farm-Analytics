@@ -378,81 +378,138 @@ function renderFeed(farmKeys) {
   `;
   document.getElementById('feed-kpi').innerHTML = feedKpi;
 
-  // ---------- Per-house day-by-day cards ----------
-  // One card per house with a compact daily table — every day shows
-  // g/bird vs farm STD + cumulative feed %; weighing days additionally
-  // show FCR. Sorted by overall status (worst first).
-  const RANK = { BAD: 2, WARN: 1, GOOD: 0 };
+  // ---------- Per-house WEEKLY cards ----------
+  // Daily detail collapsed to one row per week (Day 1-7, 8-14, ...).
+  // Each card carries a 4-up KPI strip in the header (cumulative feed %,
+  // current FCR, water:feed ratio, feed waste gap) so 7A and 7D no longer
+  // need their own table in the Health tab.
+  const RANK  = { BAD: 2, WARN: 1, GOOD: 0 };
   const BADGE = {
-    BAD:  { cls: 'crit',  text: '🚨 กินน้อยมาก' },
-    WARN: { cls: 'light', text: '⚠ มีวันกินน้อย' },
-    GOOD: { cls: 'ok',    text: '✓ กินตามเกณฑ์' },
+    BAD:  { cls: 'crit',  text: '🚨 ต้องตรวจ' },
+    WARN: { cls: 'light', text: '⚠ เฝ้าระวัง' },
+    GOOD: { cls: 'ok',    text: '✓ ปกติ' },
   };
 
   const cards = [];
   for (const fk of farmKeys) {
     const farm = STATE.farms[fk];
     for (const h of farm.houses) {
-      const fd = feedDailyHistory(h);
-      if (!fd) continue;
-      cards.push({ h, fd, farmKey: fk, farmName: farm.name });
+      const fw = feedWeeklyAnalysis(h);
+      if (!fw) continue;
+      cards.push({ h, fw, farmKey: fk, farmName: farm.name });
     }
   }
-  cards.sort((a, b) => (RANK[b.fd.overall] || 0) - (RANK[a.fd.overall] || 0));
+  cards.sort((a, b) => (RANK[b.fw.overall] || 0) - (RANK[a.fw.overall] || 0));
 
-  const cardsHtml = cards.map(({ h, fd, farmKey, farmName }) => {
+  // KPI sub-row inside each card — turns the four cross-cutting feed
+  // metrics into a single scannable block.
+  function feedKpiHtml(fw) {
+    const cumPct = fw.cumFeedPct;
+    const cumCls = cumPct == null ? 'mute' : cumPct < 95 ? 'bad' : cumPct > 110 ? 'warn' : 'good';
+    const cumStr = cumPct != null ? cumPct.toFixed(1) + '%' : '–';
+    const cumNote = cumPct == null ? '–'
+                  : cumPct < 95 ? 'กินขาด · ตรวจสุขภาพ'
+                  : cumPct > 110 ? 'กินเกินแผน · เช็คสิ้นเปลือง'
+                  : 'ตามแผน';
+    const fcrStr  = fw.lastFcr != null ? fw.lastFcr.toFixed(2) : '–';
+    const fcrNote = fw.lastFcr != null ? `Day ${fw.lastFcrDay}` : 'รอวันชั่ง';
+    const wf = fw.waterFeed;
+    const wfStr  = wf.ratio != null ? wf.ratio.toFixed(2) : '–';
+    const wfCls  = wf.status === 'OK' ? 'good'
+                 : wf.status === 'BADDATA' ? 'mute'
+                 : 'warn';
+    const wfNote = wf.status === 'OK' ? 'อยู่ในเกณฑ์ 1.5-2.4'
+                 : wf.status === 'LOW' ? 'ดื่มน้อย — เช็คสุขภาพ'
+                 : wf.status === 'HIGH' ? 'heat stress/ท้องเสีย'
+                 : 'ข้อมูลน้ำผิด';
+    const waste = fw.waste;
+    const gapStr = waste.gapPct != null ? (waste.gapPct >= 0 ? '+' : '') + waste.gapPct.toFixed(2) + '%' : '–';
+    const gapCls = waste.status === 'HIGH'  ? 'bad'
+                 : waste.status === 'WATCH' ? 'warn'
+                 : waste.status === 'OK'    ? 'good' : 'mute';
+    const gapNote = waste.status === 'HIGH'  ? 'หกเยอะ — ตรวจถาด/เส้น'
+                  : waste.status === 'WATCH' ? 'เฝ้าระวัง'
+                  : waste.status === 'OK'    ? 'ลง ≈ กิน'
+                  : 'ไม่มีข้อมูล';
+    return `
+      <div class="feed-kpi-row">
+        <div class="fk fk-${cumCls}">
+          <div class="fk-lab">อาหารกินสะสม</div>
+          <div class="fk-val">${cumStr}</div>
+          <div class="fk-sub">ของแผน · ${cumNote}</div>
+        </div>
+        <div class="fk fk-${fw.lastFcr != null ? 'good' : 'mute'}">
+          <div class="fk-lab">FCR ปัจจุบัน</div>
+          <div class="fk-val">${fcrStr}</div>
+          <div class="fk-sub">${fcrNote}</div>
+        </div>
+        <div class="fk fk-${wfCls}">
+          <div class="fk-lab">น้ำ : อาหาร</div>
+          <div class="fk-val">${wfStr}</div>
+          <div class="fk-sub">${wfNote}</div>
+        </div>
+        <div class="fk fk-${gapCls}">
+          <div class="fk-lab">อาหารหก/สูญเปล่า</div>
+          <div class="fk-val">${gapStr}</div>
+          <div class="fk-sub">ลง ${waste.loadedPct != null ? waste.loadedPct.toFixed(2) + '%' : '–'} / กิน ${waste.eatenPct != null ? waste.eatenPct.toFixed(2) + '%' : '–'} · ${gapNote}</div>
+        </div>
+      </div>`;
+  }
+
+  const cardsHtml = cards.map(({ h, fw, farmKey, farmName }) => {
     const fc = getFarmClass(farmKey, farmKeys);
     const farmShort = escapeHtml(farmName.replace('ฟาร์ม',''));
-    const cardCls = fd.overall === 'BAD' ? 'card-bad'
-                  : fd.overall === 'WARN' ? 'card-warn' : 'card-good';
-    const badge = BADGE[fd.overall];
-    const rowsHtml = fd.rows.map(r => {
-      const dev = r.devPct;
+    const cardCls = fw.overall === 'BAD' ? 'card-bad'
+                  : fw.overall === 'WARN' ? 'card-warn' : 'card-good';
+    const badge = BADGE[fw.overall];
+
+    const rowsHtml = fw.rows.map(r => {
       const cellCls = r.status === 'LOW' ? 'pct-c'
                     : r.status === 'HIGH' ? 'pct-w'
                     : (r.status === 'NORMAL' ? 'pct-o' : '');
-      const sign = (dev != null && dev >= 0) ? '+' : '';
-      const devStr = dev != null ? `${sign}${dev.toFixed(0)}%` : '–';
-      const gStr = r.gPerBird != null ? r.gPerBird.toFixed(0) : '–';
-      const stdStr = r.stdG != null ? r.stdG.toFixed(0) : '–';
+      const sign = (r.devPct != null && r.devPct >= 0) ? '+' : '';
+      const devStr = r.devPct != null ? `${sign}${r.devPct.toFixed(0)}%` : '–';
+      const gStr   = r.avgG    != null ? r.avgG.toFixed(0) : '–';
+      const stdStr = r.avgStd  != null ? r.avgStd.toFixed(0) : '–';
       const feedStr = r.feedKg != null ? fmtNum(r.feedKg, 0) : '–';
-      const cumPctStr = r.cumFeedPct != null ? r.cumFeedPct.toFixed(1) + '%' : '–';
-      const fcrStr = (r.fcr != null && r.fcr > 0) ? `<b>${r.fcr.toFixed(2)}</b>` : '<span style="color:var(--ink-mute)">–</span>';
+      const cumStr  = r.cumFeedPct != null ? r.cumFeedPct.toFixed(1) + '%' : '–';
+      const wfStr   = r.wfRatio != null ? r.wfRatio.toFixed(2) : '–';
+      const fcrStr  = (r.fcr != null && r.fcr > 0)
+                    ? `<b>${r.fcr.toFixed(2)}</b>`
+                    : '<span style="color:var(--ink-mute)">–</span>';
       return `<tr>
-        <td class="mono"><b>Day ${r.day}</b></td>
+        <td class="mono"><b>สัปดาห์ ${r.week}</b><br><small style="color:var(--ink-mute)">Day ${r.dayFrom}-${r.dayTo}</small></td>
         <td class="mono">${feedStr}</td>
         <td class="mono">${gStr}</td>
         <td class="mono">${stdStr}</td>
         <td class="mono ${cellCls}">${devStr}</td>
-        <td class="mono">${cumPctStr}</td>
+        <td class="mono">${cumStr}</td>
+        <td class="mono">${wfStr}</td>
         <td class="mono">${fcrStr}</td>
       </tr>`;
     }).join('');
-    const fcrHeader = fd.lastFcr != null
-      ? `FCR ปัจจุบัน <b>${fd.lastFcr.toFixed(2)}</b> (Day ${fd.lastFcrDay})`
-      : 'ยังไม่มี FCR (รอวันชั่ง)';
-    const cumPctHeader = fd.cumFeedPct != null
-      ? `อาหารกินสะสม <b>${fd.cumFeedPct.toFixed(1)}%</b> ของแผน`
-      : '';
+
     return `
       <div class="wk-card ${cardCls}">
         <div class="wk-head">
           <div class="wk-title">
             <span class="pill ${fc}">${farmShort}</span>
             <b>เล้า ${escapeHtml(String(h.house))}</b>
-            <span class="wk-age">อายุ ${h.age != null ? h.age : '–'} วัน · ${cumPctHeader} · ${fcrHeader}</span>
+            <span class="wk-age">อายุ ${h.age != null ? h.age : '–'} วัน</span>
           </div>
           <span class="pill ${badge.cls}">${badge.text}</span>
         </div>
+        ${feedKpiHtml(fw)}
         <div class="wk-table-wrap">
           <table class="wk-table">
             <thead><tr>
-              <th>วันที่</th>
+              <th>สัปดาห์</th>
               <th>อาหาร (kg)</th>
-              <th>g/ตัว/วัน</th>
+              <th>g/ตัว/วัน เฉลี่ย</th>
               <th>STD (g)</th>
               <th>Δ%</th>
-              <th>%สะสม</th>
+              <th>%กินสะสม</th>
+              <th>น้ำ:อาหาร</th>
               <th>FCR</th>
             </tr></thead>
             <tbody>${rowsHtml}</tbody>

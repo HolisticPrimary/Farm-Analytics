@@ -1246,6 +1246,45 @@ footer.colophon .footer-zone {
   .wk-card .wk-table { font-size: 11px; }
 }
 
+/* ============ §03 FEED CARD · IN-CARD KPI SUB-ROW ============ */
+/* Four cross-cutting feed metrics (cumulative %, FCR, water:feed,
+   waste gap) sit in a compact 4-up grid between the card header and
+   the weekly table. */
+.feed-kpi-row {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 10px;
+}
+.feed-kpi-row .fk {
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  border-left: 3px solid var(--ink-mute);
+}
+.feed-kpi-row .fk-good { border-left-color: var(--green); }
+.feed-kpi-row .fk-warn { border-left-color: var(--amber); }
+.feed-kpi-row .fk-bad  { border-left-color: var(--red); }
+.feed-kpi-row .fk-mute { border-left-color: var(--ink-mute); }
+.feed-kpi-row .fk-lab {
+  font-size: 10px; color: var(--ink-mute);
+  font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+}
+.feed-kpi-row .fk-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px; font-weight: 700;
+  color: var(--ink); margin-top: 2px;
+}
+.feed-kpi-row .fk-good .fk-val { color: var(--green); }
+.feed-kpi-row .fk-warn .fk-val { color: var(--amber); }
+.feed-kpi-row .fk-bad  .fk-val { color: var(--red); }
+.feed-kpi-row .fk-sub {
+  font-size: 10px; color: var(--ink-mute); margin-top: 2px;
+  line-height: 1.4;
+}
+@media (max-width: 720px) {
+  .feed-kpi-row { grid-template-columns: 1fr 1fr; }
+}
+
 /* ============ 7B · CULL CARDS (Health tab) ============ */
 /* Same visual language as the Daily Overview house-cards so the operator
    scans 7B the same way: status colour on the left, big numbers in the
@@ -1509,9 +1548,9 @@ footer.colophon .footer-zone {
 
     <!-- TAB: FEED -->
     <div class="tab-content" id="tab-feed">
-      <h2 class="sec"><span class="num">§ 03</span> อาหาร vs เกณฑ์ฟาร์ม · รายวัน + FCR</h2>
+      <h2 class="sec"><span class="num">§ 03</span> อาหาร · รายสัปดาห์ · ครบวงจร</h2>
       <div class="sec-rule"></div>
-      <p class="lede">การ์ดละ 1 เล้า · ตารางรายวันแสดง <b>g/ตัว/วัน</b> เทียบเกณฑ์ฟาร์ม + <b>FCR</b> ทุกวันที่ชั่ง + <b>%อาหารกินสะสม</b> เทียบแผน</p>
+      <p class="lede">การ์ดละ 1 เล้า · สรุปรายสัปดาห์ + 4 KPI: <b>%กินสะสม</b> · <b>FCR</b> · <b>น้ำ:อาหาร</b> · <b>อาหารหก/สูญเปล่า</b></p>
 
       <div class="kpi-row" id="feed-kpi"></div>
 
@@ -1582,53 +1621,20 @@ footer.colophon .footer-zone {
     <div class="tab-content" id="tab-health">
       <h2 class="sec"><span class="num">§ 07</span> สุขภาพรายวัน &amp; การเติบโต</h2>
       <div class="sec-rule"></div>
-      <p class="lede">ข้อมูลที่ดึงเพิ่มจากใบหน้าเล้า — น้ำ:อาหาร, แยกตายจริง/คัด, รูปแบบเช้า/เย็น, น้ำหนักจริงเทียบเกณฑ์ 4.5× ของแรกเข้า, อาหารหก/สูญเปล่า</p>
+      <p class="lede">ข้อมูลสุขภาพและการเติบโตที่ดึงจากใบหน้าเล้า — แยกตายจริง/คัด·รูปแบบเช้า/เย็น + น้ำหนัก/ADG/FCR รายสัปดาห์เทียบ Ross 308 · <small>(น้ำ:อาหาร + อาหารหก/สูญเปล่า ย้ายไปแท็บ "อาหาร vs STD")</small></p>
 
       <div class="kpi-row" id="health-kpi"></div>
 
       <div class="card">
-        <h4>7A · อัตราส่วน น้ำ : อาหาร</h4>
-        <div class="card-sub">มาตรฐาน 1.5–2.4 · ต่ำ = ไก่ดื่มน้ำน้อย (อาจป่วย) · สูง = heat stress / ท้องเสีย — สัญญาณเตือนเบอร์ 1</div>
-        <div class="table-wrap">
-          <table id="water-table">
-            <thead>
-              <tr>
-                <th>#</th><th>ฟาร์ม/เล้า</th><th>อายุ</th>
-                <th>น้ำ (ล.)</th><th>อาหาร (kg)</th><th>น้ำ:อาหาร</th>
-                <th>สถานะ</th><th>คำแนะนำ</th>
-              </tr>
-            </thead>
-            <tbody id="water-tbody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h4>7B · แยก "ตายจริง" vs "คัด" + รูปแบบ เช้า/เย็น</h4>
+        <h4>7A · แยก "ตายจริง" vs "คัด" + รูปแบบ เช้า/เย็น</h4>
         <div class="card-sub">คัด = การจัดการเชิงรุก (ดี) · ตายจริง = สูญเสียคุมไม่ได้ (แย่) · ตายเย็นเยอะ = heat stress</div>
         <div class="cull-cards" id="cull-cards"></div>
       </div>
 
       <div class="card">
-        <h4>7C · น้ำหนัก / ADG / FCR รายสัปดาห์ <small style="font-size:11px; color:var(--ink-mute); font-weight:400">· เทียบ Ross 308 คละเพศ + กฎ ≥ 4.5× แรกเข้า</small></h4>
+        <h4>7B · น้ำหนัก / ADG / FCR รายสัปดาห์ <small style="font-size:11px; color:var(--ink-mute); font-weight:400">· เทียบ Ross 308 คละเพศ + กฎ ≥ 4.5× แรกเข้า</small></h4>
         <div class="card-sub">ทุกครั้งที่ชั่ง (สัปดาห์) เทียบ <b>ADG จริง</b> กับ Ross 308 ในช่วงเดียวกัน + <b>FCR สะสม</b> กับ Ross 308 · เกณฑ์ฟาร์ม: น้ำหนักต้อง ≥ 4.5× แรกเข้าทุกครั้ง</div>
         <div id="weight-cards" class="wk-cards"></div>
-      </div>
-
-      <div class="card">
-        <h4>7D · อาหารหก/สูญเปล่า (ลงสะสม vs กินสะสม)</h4>
-        <div class="card-sub">ช่องว่างระหว่าง %อาหารที่ลงเล้า กับ %อาหารที่ไก่กินจริง = อาหารที่ไม่ถึงปากไก่ (เงินรั่ว)</div>
-        <div class="table-wrap">
-          <table id="waste-table">
-            <thead>
-              <tr>
-                <th>#</th><th>ฟาร์ม/เล้า</th><th>%อาหารลงสะสม</th>
-                <th>%อาหารกินสะสม</th><th>ช่องว่าง</th><th>สถานะ</th>
-              </tr>
-            </thead>
-            <tbody id="waste-tbody"></tbody>
-          </table>
-        </div>
       </div>
     </div>
 
@@ -2266,6 +2272,119 @@ function weeklyWeightAnalysis(h) {
   else                               overall = 'GOOD';
 
   return { initial, rows, overall };
+}
+
+// Build a WEEKLY feed breakdown for §03. Aggregates the day-by-day
+// H-sheet data into 7-day buckets (Day 1-7, 8-14, ...) and folds in:
+//   - n้ำ:อาหาร ratio for the week (litres ÷ kg, only when daily water
+//     records look sensible — broken templates store 14, 15 l/day which
+//     is physically impossible for a full house so we filter)
+//   - FCR snapshot for the week (whichever weighing landed inside the
+//     7-day window, usually the last day of the week)
+//   - cumulative feed % vs the farm program plan
+// Header carries the face-sheet feed-loaded vs feed-eaten gap so the
+// "อาหารหก/สูญเปล่า" badge moves out of §07D into the same card.
+function feedWeeklyAnalysis(h) {
+  if (!h.dailyHistory || h.dailyHistory.length === 0) return null;
+
+  // Bucket daily records by week number.
+  const buckets = new Map();
+  for (const d of h.dailyHistory) {
+    const wk = Math.ceil(d.day / 7);
+    if (!buckets.has(wk)) buckets.set(wk, {
+      week: wk, days: [], feedKg: 0, planKg: 0,
+      sumG: 0, sumStd: 0, sumGCount: 0,
+      waterSum: 0, waterCount: 0,
+      lastFcr: null, lastFcrDay: null,
+    });
+    const b = buckets.get(wk);
+    b.days.push(d.day);
+    if (d.feed_used != null) b.feedKg += d.feed_used;
+    const stdG = farmFeedLookup(d.day);
+    if (stdG != null && d.qty_rem) {
+      b.planKg += (stdG * d.qty_rem) / 1000;
+    }
+    if (d.feed_used != null && d.qty_rem && d.qty_rem > 0 && stdG != null) {
+      b.sumG += (d.feed_used * 1000) / d.qty_rem;
+      b.sumStd += stdG;
+      b.sumGCount++;
+    }
+    // Water values < 200 l/day are physically impossible for a house of
+    // thousands of birds (a bird drinks 100-400 ml/day), so we treat them
+    // as data-entry errors and skip them when forming the ratio.
+    if (d.water != null && d.water >= 200) {
+      b.waterSum += d.water;
+      b.waterCount++;
+    }
+    if (d.fcr != null && d.fcr > 0) {
+      b.lastFcr = d.fcr;
+      b.lastFcrDay = d.day;
+    }
+  }
+
+  const weeks = [...buckets.values()].sort((a, b) => a.week - b.week);
+
+  // Per-week summary (averages + status)
+  let cumFeedKg = 0, cumPlanKg = 0;
+  const rows = weeks.map(b => {
+    const avgG   = b.sumGCount > 0 ? b.sumG / b.sumGCount : null;
+    const avgStd = b.sumGCount > 0 ? b.sumStd / b.sumGCount : null;
+    const devPct = avgStd ? ((avgG - avgStd) / avgStd) * 100 : null;
+    const status = devPct == null ? null
+                : devPct < -5 ? 'LOW'
+                : devPct >  5 ? 'HIGH' : 'NORMAL';
+    // Water-to-feed ratio for the week: total water (l) ÷ total feed (kg).
+    // Only computed when at least one valid water record exists.
+    const wfRatio = (b.waterCount > 0 && b.feedKg > 0) ? b.waterSum / b.feedKg : null;
+    cumFeedKg += b.feedKg;
+    cumPlanKg += b.planKg;
+    return {
+      week: b.week,
+      dayFrom: b.days[0],
+      dayTo: b.days[b.days.length - 1],
+      feedKg: b.feedKg,
+      avgG, avgStd, devPct, status,
+      wfRatio,
+      fcr: b.lastFcr,
+      fcrDay: b.lastFcrDay,
+      cumFeedKg,
+      cumPlanKg,
+      cumFeedPct: cumPlanKg > 0 ? (cumFeedKg / cumPlanKg) * 100 : null,
+    };
+  });
+
+  // Face-sheet feed-loaded vs feed-eaten — same data 7D used to expose.
+  const loadedPct = h.feed_loaded_pct;
+  const eatenPct  = h.feed_pct;
+  const gapPct = (loadedPct != null && eatenPct != null) ? loadedPct - eatenPct : null;
+  const wasteStatus = gapPct == null ? null
+                    : gapPct > 1.0 ? 'HIGH'
+                    : gapPct > 0.5 ? 'WATCH' : 'OK';
+
+  // Latest snapshot of intake / FCR / water:feed for the header KPIs.
+  const lastRow = rows[rows.length - 1];
+  const lastWfWeek = [...rows].reverse().find(r => r.wfRatio != null);
+  const wfStatus = lastWfWeek == null ? 'BADDATA'
+                : lastWfWeek.wfRatio < 1.5 ? 'LOW'
+                : lastWfWeek.wfRatio > 2.4 ? 'HIGH' : 'OK';
+
+  // Overall card status: drives the border colour.
+  const anyBadWeek = rows.some(r => r.devPct != null && r.devPct < -10);
+  const anyLowWeek = rows.some(r => r.status === 'LOW');
+  const overall = anyBadWeek || wasteStatus === 'HIGH' ? 'BAD'
+                : anyLowWeek || wasteStatus === 'WATCH' ? 'WARN'
+                : 'GOOD';
+
+  return {
+    rows,
+    cumFeedKg, cumPlanKg,
+    cumFeedPct: lastRow ? lastRow.cumFeedPct : null,
+    lastFcr:    lastRow ? lastRow.fcr : null,
+    lastFcrDay: lastRow ? lastRow.fcrDay : null,
+    waste: { loadedPct, eatenPct, gapPct, status: wasteStatus },
+    waterFeed: { ratio: lastWfWeek ? lastWfWeek.wfRatio : null, status: wfStatus },
+    overall,
+  };
 }
 
 // Build the day-by-day feed breakdown the §03 card consumes.
@@ -3718,81 +3837,138 @@ function renderFeed(farmKeys) {
   `;
   document.getElementById('feed-kpi').innerHTML = feedKpi;
 
-  // ---------- Per-house day-by-day cards ----------
-  // One card per house with a compact daily table — every day shows
-  // g/bird vs farm STD + cumulative feed %; weighing days additionally
-  // show FCR. Sorted by overall status (worst first).
-  const RANK = { BAD: 2, WARN: 1, GOOD: 0 };
+  // ---------- Per-house WEEKLY cards ----------
+  // Daily detail collapsed to one row per week (Day 1-7, 8-14, ...).
+  // Each card carries a 4-up KPI strip in the header (cumulative feed %,
+  // current FCR, water:feed ratio, feed waste gap) so 7A and 7D no longer
+  // need their own table in the Health tab.
+  const RANK  = { BAD: 2, WARN: 1, GOOD: 0 };
   const BADGE = {
-    BAD:  { cls: 'crit',  text: '🚨 กินน้อยมาก' },
-    WARN: { cls: 'light', text: '⚠ มีวันกินน้อย' },
-    GOOD: { cls: 'ok',    text: '✓ กินตามเกณฑ์' },
+    BAD:  { cls: 'crit',  text: '🚨 ต้องตรวจ' },
+    WARN: { cls: 'light', text: '⚠ เฝ้าระวัง' },
+    GOOD: { cls: 'ok',    text: '✓ ปกติ' },
   };
 
   const cards = [];
   for (const fk of farmKeys) {
     const farm = STATE.farms[fk];
     for (const h of farm.houses) {
-      const fd = feedDailyHistory(h);
-      if (!fd) continue;
-      cards.push({ h, fd, farmKey: fk, farmName: farm.name });
+      const fw = feedWeeklyAnalysis(h);
+      if (!fw) continue;
+      cards.push({ h, fw, farmKey: fk, farmName: farm.name });
     }
   }
-  cards.sort((a, b) => (RANK[b.fd.overall] || 0) - (RANK[a.fd.overall] || 0));
+  cards.sort((a, b) => (RANK[b.fw.overall] || 0) - (RANK[a.fw.overall] || 0));
 
-  const cardsHtml = cards.map(({ h, fd, farmKey, farmName }) => {
+  // KPI sub-row inside each card — turns the four cross-cutting feed
+  // metrics into a single scannable block.
+  function feedKpiHtml(fw) {
+    const cumPct = fw.cumFeedPct;
+    const cumCls = cumPct == null ? 'mute' : cumPct < 95 ? 'bad' : cumPct > 110 ? 'warn' : 'good';
+    const cumStr = cumPct != null ? cumPct.toFixed(1) + '%' : '–';
+    const cumNote = cumPct == null ? '–'
+                  : cumPct < 95 ? 'กินขาด · ตรวจสุขภาพ'
+                  : cumPct > 110 ? 'กินเกินแผน · เช็คสิ้นเปลือง'
+                  : 'ตามแผน';
+    const fcrStr  = fw.lastFcr != null ? fw.lastFcr.toFixed(2) : '–';
+    const fcrNote = fw.lastFcr != null ? `Day ${fw.lastFcrDay}` : 'รอวันชั่ง';
+    const wf = fw.waterFeed;
+    const wfStr  = wf.ratio != null ? wf.ratio.toFixed(2) : '–';
+    const wfCls  = wf.status === 'OK' ? 'good'
+                 : wf.status === 'BADDATA' ? 'mute'
+                 : 'warn';
+    const wfNote = wf.status === 'OK' ? 'อยู่ในเกณฑ์ 1.5-2.4'
+                 : wf.status === 'LOW' ? 'ดื่มน้อย — เช็คสุขภาพ'
+                 : wf.status === 'HIGH' ? 'heat stress/ท้องเสีย'
+                 : 'ข้อมูลน้ำผิด';
+    const waste = fw.waste;
+    const gapStr = waste.gapPct != null ? (waste.gapPct >= 0 ? '+' : '') + waste.gapPct.toFixed(2) + '%' : '–';
+    const gapCls = waste.status === 'HIGH'  ? 'bad'
+                 : waste.status === 'WATCH' ? 'warn'
+                 : waste.status === 'OK'    ? 'good' : 'mute';
+    const gapNote = waste.status === 'HIGH'  ? 'หกเยอะ — ตรวจถาด/เส้น'
+                  : waste.status === 'WATCH' ? 'เฝ้าระวัง'
+                  : waste.status === 'OK'    ? 'ลง ≈ กิน'
+                  : 'ไม่มีข้อมูล';
+    return `
+      <div class="feed-kpi-row">
+        <div class="fk fk-${cumCls}">
+          <div class="fk-lab">อาหารกินสะสม</div>
+          <div class="fk-val">${cumStr}</div>
+          <div class="fk-sub">ของแผน · ${cumNote}</div>
+        </div>
+        <div class="fk fk-${fw.lastFcr != null ? 'good' : 'mute'}">
+          <div class="fk-lab">FCR ปัจจุบัน</div>
+          <div class="fk-val">${fcrStr}</div>
+          <div class="fk-sub">${fcrNote}</div>
+        </div>
+        <div class="fk fk-${wfCls}">
+          <div class="fk-lab">น้ำ : อาหาร</div>
+          <div class="fk-val">${wfStr}</div>
+          <div class="fk-sub">${wfNote}</div>
+        </div>
+        <div class="fk fk-${gapCls}">
+          <div class="fk-lab">อาหารหก/สูญเปล่า</div>
+          <div class="fk-val">${gapStr}</div>
+          <div class="fk-sub">ลง ${waste.loadedPct != null ? waste.loadedPct.toFixed(2) + '%' : '–'} / กิน ${waste.eatenPct != null ? waste.eatenPct.toFixed(2) + '%' : '–'} · ${gapNote}</div>
+        </div>
+      </div>`;
+  }
+
+  const cardsHtml = cards.map(({ h, fw, farmKey, farmName }) => {
     const fc = getFarmClass(farmKey, farmKeys);
     const farmShort = escapeHtml(farmName.replace('ฟาร์ม',''));
-    const cardCls = fd.overall === 'BAD' ? 'card-bad'
-                  : fd.overall === 'WARN' ? 'card-warn' : 'card-good';
-    const badge = BADGE[fd.overall];
-    const rowsHtml = fd.rows.map(r => {
-      const dev = r.devPct;
+    const cardCls = fw.overall === 'BAD' ? 'card-bad'
+                  : fw.overall === 'WARN' ? 'card-warn' : 'card-good';
+    const badge = BADGE[fw.overall];
+
+    const rowsHtml = fw.rows.map(r => {
       const cellCls = r.status === 'LOW' ? 'pct-c'
                     : r.status === 'HIGH' ? 'pct-w'
                     : (r.status === 'NORMAL' ? 'pct-o' : '');
-      const sign = (dev != null && dev >= 0) ? '+' : '';
-      const devStr = dev != null ? `${sign}${dev.toFixed(0)}%` : '–';
-      const gStr = r.gPerBird != null ? r.gPerBird.toFixed(0) : '–';
-      const stdStr = r.stdG != null ? r.stdG.toFixed(0) : '–';
+      const sign = (r.devPct != null && r.devPct >= 0) ? '+' : '';
+      const devStr = r.devPct != null ? `${sign}${r.devPct.toFixed(0)}%` : '–';
+      const gStr   = r.avgG    != null ? r.avgG.toFixed(0) : '–';
+      const stdStr = r.avgStd  != null ? r.avgStd.toFixed(0) : '–';
       const feedStr = r.feedKg != null ? fmtNum(r.feedKg, 0) : '–';
-      const cumPctStr = r.cumFeedPct != null ? r.cumFeedPct.toFixed(1) + '%' : '–';
-      const fcrStr = (r.fcr != null && r.fcr > 0) ? `<b>${r.fcr.toFixed(2)}</b>` : '<span style="color:var(--ink-mute)">–</span>';
+      const cumStr  = r.cumFeedPct != null ? r.cumFeedPct.toFixed(1) + '%' : '–';
+      const wfStr   = r.wfRatio != null ? r.wfRatio.toFixed(2) : '–';
+      const fcrStr  = (r.fcr != null && r.fcr > 0)
+                    ? `<b>${r.fcr.toFixed(2)}</b>`
+                    : '<span style="color:var(--ink-mute)">–</span>';
       return `<tr>
-        <td class="mono"><b>Day ${r.day}</b></td>
+        <td class="mono"><b>สัปดาห์ ${r.week}</b><br><small style="color:var(--ink-mute)">Day ${r.dayFrom}-${r.dayTo}</small></td>
         <td class="mono">${feedStr}</td>
         <td class="mono">${gStr}</td>
         <td class="mono">${stdStr}</td>
         <td class="mono ${cellCls}">${devStr}</td>
-        <td class="mono">${cumPctStr}</td>
+        <td class="mono">${cumStr}</td>
+        <td class="mono">${wfStr}</td>
         <td class="mono">${fcrStr}</td>
       </tr>`;
     }).join('');
-    const fcrHeader = fd.lastFcr != null
-      ? `FCR ปัจจุบัน <b>${fd.lastFcr.toFixed(2)}</b> (Day ${fd.lastFcrDay})`
-      : 'ยังไม่มี FCR (รอวันชั่ง)';
-    const cumPctHeader = fd.cumFeedPct != null
-      ? `อาหารกินสะสม <b>${fd.cumFeedPct.toFixed(1)}%</b> ของแผน`
-      : '';
+
     return `
       <div class="wk-card ${cardCls}">
         <div class="wk-head">
           <div class="wk-title">
             <span class="pill ${fc}">${farmShort}</span>
             <b>เล้า ${escapeHtml(String(h.house))}</b>
-            <span class="wk-age">อายุ ${h.age != null ? h.age : '–'} วัน · ${cumPctHeader} · ${fcrHeader}</span>
+            <span class="wk-age">อายุ ${h.age != null ? h.age : '–'} วัน</span>
           </div>
           <span class="pill ${badge.cls}">${badge.text}</span>
         </div>
+        ${feedKpiHtml(fw)}
         <div class="wk-table-wrap">
           <table class="wk-table">
             <thead><tr>
-              <th>วันที่</th>
+              <th>สัปดาห์</th>
               <th>อาหาร (kg)</th>
-              <th>g/ตัว/วัน</th>
+              <th>g/ตัว/วัน เฉลี่ย</th>
               <th>STD (g)</th>
               <th>Δ%</th>
-              <th>%สะสม</th>
+              <th>%กินสะสม</th>
+              <th>น้ำ:อาหาร</th>
               <th>FCR</th>
             </tr></thead>
             <tbody>${rowsHtml}</tbody>
@@ -4042,19 +4218,15 @@ function updateWindCalc() {
 
 // ===== js/render-health.js =====
 // ====================================================================
-// FARMSENSE · Health & Growth tab (Group A analyses)
-//   7A water:feed ratio · 7B cull vs died + เช้า/เย็น
-//   7C actual weight vs Ross 308 · 7D feed loaded vs eaten
+// FARMSENSE · Health & Growth tab (§07)
+//   7A cull vs died + เช้า/เย็น  ·  7B actual weight + ADG + FCR vs Ross
+//   (water:feed ratio + feed waste live in §03 Feed tab now)
 // ====================================================================
 
-const WATER_PILL   = { OK: 'ok', LOW: 'low', HIGH: 'high', BADDATA: 'over' };
-const WATER_LABEL  = { OK: 'ปกติ', LOW: 'น้ำน้อย', HIGH: 'น้ำสูง', BADDATA: 'ข้อมูลผิด' };
 const PATTERN_PILL  = { EVEN: 'ok', HEAT: 'cf', NIGHT: 'light' };
 const PATTERN_LABEL = { EVEN: 'สม่ำเสมอ', HEAT: 'เย็นหนัก · heat stress', NIGHT: 'เช้าหนัก · หนาว/กลางคืน' };
 const WEIGHT_PILL   = { ABOVE: 'ok', BELOW: 'crit' };
 const WEIGHT_LABEL  = { ABOVE: 'ผ่านเกณฑ์ ≥4.5×', BELOW: 'ต่ำกว่า 4.5×' };
-const WASTE_PILL    = { OK: 'ok', WATCH: 'light', HIGH: 'low' };
-const WASTE_LABEL   = { OK: 'ปกติ', WATCH: 'เฝ้าระวัง', HIGH: 'หกเยอะ' };
 
 function emptyRow(cols, msg) {
   return `<tr><td colspan="${cols}" style="text-align:center; padding:24px; color:var(--ink-mute)">${msg}</td></tr>`;
@@ -4070,60 +4242,43 @@ function renderHealth(farmKeys) {
   const pill = h => `<span class="pill ${getFarmClass(h.farmKey, farmKeys)}">${escapeHtml(h.farmName.replace('ฟาร์ม',''))}</span> <b>${h.house}</b>`;
 
   // ---------- KPIs ----------
-  const wf = allHouses.map(h => ({ h, r: waterFeedRatio(h) })).filter(x => x.r);
-  const avgWF = wf.length ? wf.reduce((s,x) => s + x.r.ratio, 0) / wf.length : null;
-  const wfAbnormal = wf.filter(x => x.r.status !== 'OK').length;
-
   const bd = allHouses.map(h => ({ h, b: mortalityBreakdown(h) })).filter(x => x.b);
-  const avgCull = bd.length ? bd.reduce((s,x) => s + x.b.cullRate, 0) / bd.length : null;
+  const heatHouses = bd.filter(x => x.b.pattern === 'HEAT').length;
+  const nightHouses = bd.filter(x => x.b.pattern === 'NIGHT').length;
+  const totalCullPattern = bd.length;
 
   const wv = allHouses.map(h => ({ h, w: weightVsStandard(h) })).filter(x => x.w);
   const behind = wv.filter(x => x.w.status === 'BELOW').length;
 
+  // Use weeklyWeightAnalysis for ADG/FCR overall counts
+  const weeklyArr = allHouses.map(h => ({ h, w: weeklyWeightAnalysis(h) })).filter(x => x.w);
+  const weeklyWarn = weeklyArr.filter(x => x.w.overall === 'WARN').length;
+  const weeklyBad  = weeklyArr.filter(x => x.w.overall === 'BAD').length;
+
   document.getElementById('health-kpi').innerHTML = `
     <div class="stat">
-      <div class="lab">น้ำ : อาหาร เฉลี่ย</div>
-      <div class="val">${avgWF != null ? avgWF.toFixed(2) : '–'}</div>
-      <div class="delta">มาตรฐาน 1.5–2.4</div>
+      <div class="lab">เล้าที่ตายเย็นหนัก</div>
+      <div class="val ${heatHouses > 0 ? 'warn' : 'good'}">${heatHouses}</div>
+      <div class="delta ${heatHouses > 0 ? 'warn' : 'good'}">heat stress · จาก ${totalCullPattern} เล้า</div>
     </div>
     <div class="stat">
-      <div class="lab">เล้า น้ำ:อาหาร ผิดปกติ</div>
-      <div class="val">${wf.length ? wfAbnormal : '–'}</div>
-      <div class="delta ${wfAbnormal > 0 ? 'warn' : 'good'}">จาก ${wf.length} เล้าที่มีข้อมูล</div>
-    </div>
-    <div class="stat">
-      <div class="lab">%คัด เฉลี่ย</div>
-      <div class="val">${avgCull != null ? avgCull.toFixed(1) + '%' : '–'}</div>
-      <div class="delta">ของการสูญเสียทั้งหมด</div>
+      <div class="lab">เล้าที่ตายเช้าหนัก</div>
+      <div class="val ${nightHouses > 0 ? 'warn' : 'good'}">${nightHouses}</div>
+      <div class="delta ${nightHouses > 0 ? 'warn' : 'good'}">หนาว/กลางคืน · จาก ${totalCullPattern} เล้า</div>
     </div>
     <div class="stat">
       <div class="lab">เล้าน้ำหนักต่ำกว่าเกณฑ์</div>
-      <div class="val">${wv.length ? behind : '–'}</div>
-      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; 4.5× ของน้ำหนักแรกเข้า</div>
+      <div class="val ${behind > 0 ? 'warn' : 'good'}">${wv.length ? behind : '–'}</div>
+      <div class="delta ${behind > 0 ? 'warn' : 'good'}">น้ำหนัก &lt; 4.5× แรกเข้า</div>
+    </div>
+    <div class="stat">
+      <div class="lab">เล้าโต/FCR ผิดปกติ</div>
+      <div class="val ${(weeklyWarn + weeklyBad) > 0 ? 'warn' : 'good'}">${weeklyArr.length ? (weeklyWarn + weeklyBad) : '–'}</div>
+      <div class="delta">เทียบ Ross 308 · จาก ${weeklyArr.length} เล้า</div>
     </div>
   `;
 
-  // ---------- 7A · water : feed ----------
-  const waterRows = wf
-    .sort((a,b) => Math.abs(b.r.ratio - 2.0) - Math.abs(a.r.ratio - 2.0))
-    .map((x, i) => {
-      const { h, r } = x;
-      const rowCls = (r.status === 'LOW' || r.status === 'BADDATA') ? 'crit' : r.status === 'HIGH' ? 'high' : '';
-      return `<tr class="${rowCls}">
-        <td><b>${i+1}</b></td>
-        <td>${pill(h)}</td>
-        <td class="mono">${h.age != null ? h.age : '–'}</td>
-        <td class="mono">${fmtNum(h.water)}</td>
-        <td class="mono">${fmtNum(h.feed_day)}</td>
-        <td class="pct ${r.status === 'OK' ? 'pct-o' : 'pct-c'}">${r.ratio.toFixed(2)}</td>
-        <td><span class="pill ${WATER_PILL[r.status]}">${WATER_LABEL[r.status]}</span></td>
-        <td style="font-size:11px; color:var(--ink-soft)">${escapeHtml(r.advice)}</td>
-      </tr>`;
-    }).join('');
-  document.getElementById('water-tbody').innerHTML = waterRows ||
-    emptyRow(8, 'ไม่มีข้อมูลน้ำ/อาหาร — ไฟล์ Excel อาจไม่มีคอลัมน์ "น้ำ" หรือ "อาหาร/วัน"');
-
-  // ---------- 7B · cull vs died + morning/evening — card layout ----------
+  // ---------- 7A · cull vs died + morning/evening — card layout ----------
   // One card per house: big numbers for died/culled, a single segmented
   // bar for AM vs PM, and a pattern badge ties it all together. Sorted
   // worst-first so heat-stress / night-pattern houses surface to the top.
@@ -4258,26 +4413,6 @@ function renderHealth(farmKeys) {
 
   document.getElementById('weight-cards').innerHTML = wkCards ||
     `<div class="insight">ไม่มีข้อมูลการชั่งน้ำหนักรายสัปดาห์ — ใบหน้าเล้าต้องมี H 1...H N กรอกน้ำหนัก + FCR</div>`;
-
-  // ---------- 7D · feed loaded vs eaten ----------
-  const waste = allHouses.map(h => ({ h, f: feedWaste(h) })).filter(x => x.f);
-  const wasteRows = waste
-    .sort((a,b) => b.f.gapPct - a.f.gapPct)
-    .map((x, i) => {
-      const { h, f } = x;
-      const rowCls = f.status === 'HIGH' ? 'crit' : f.status === 'WATCH' ? 'high' : '';
-      const gapCls = f.status === 'HIGH' ? 'pct-c' : f.status === 'WATCH' ? 'pct-w' : 'pct-o';
-      return `<tr class="${rowCls}">
-        <td><b>${i+1}</b></td>
-        <td>${pill(h)}</td>
-        <td class="mono">${f.loaded.toFixed(2)}%</td>
-        <td class="mono">${f.eaten.toFixed(2)}%</td>
-        <td class="pct ${gapCls}">${f.gapPct >= 0 ? '+' : ''}${f.gapPct.toFixed(2)}%</td>
-        <td><span class="pill ${WASTE_PILL[f.status]}">${WASTE_LABEL[f.status]}</span></td>
-      </tr>`;
-    }).join('');
-  document.getElementById('waste-tbody').innerHTML = wasteRows ||
-    emptyRow(6, 'ไม่มีข้อมูลอาหารสะสม — ไฟล์ Excel อาจไม่มีคอลัมน์ "% อาหารลงสะสม" / "% อาหารที่กินสะสม"');
 
   document.getElementById('cnt-health').textContent = allHouses.length;
 }
