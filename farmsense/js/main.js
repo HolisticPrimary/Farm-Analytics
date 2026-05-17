@@ -153,14 +153,7 @@ document.querySelectorAll('#mort-table thead th.sortable').forEach(th => {
   };
 });
 
-document.querySelectorAll('#feed-table thead th.sortable').forEach(th => {
-  th.onclick = () => {
-    const col = th.dataset.sort;
-    if (feedSort.col === col) feedSort.dir = feedSort.dir === 'asc' ? 'desc' : 'asc';
-    else { feedSort.col = col; feedSort.dir = 'asc'; }
-    renderFeed(Object.keys(STATE.farms));
-  };
-});
+// (Feed sort handlers removed — §03 is now a card grid, not a table.)
 
 // ========== PRICE / ENV INPUT HANDLERS ==========
 

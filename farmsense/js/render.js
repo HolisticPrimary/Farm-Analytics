@@ -378,59 +378,91 @@ function renderFeed(farmKeys) {
   `;
   document.getElementById('feed-kpi').innerHTML = feedKpi;
 
-  const sorted = [...allHouses].sort((a, b) => {
-    let va, vb;
-    if (feedSort.col === 'dev') { va = a.dev; vb = b.dev; }
-    else if (feedSort.col === 'age') { va = a.age; vb = b.age; }
-    else if (feedSort.col === 'qty') { va = a.qty_rem||0; vb = b.qty_rem||0; }
-    else if (feedSort.col === 'farm') { va = a.farmName||''; vb = b.farmName||''; return feedSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
-    else { va = 0; vb = 0; }
-    return feedSort.dir === 'asc' ? va - vb : vb - va;
-  });
-
-  document.querySelectorAll('#feed-table thead th.sortable').forEach(th => {
-    th.classList.remove('sorted-asc','sorted-desc');
-    if (th.dataset.sort === feedSort.col) {
-      th.classList.add(feedSort.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
-    }
-  });
-
-  const ADVICE = {
-    NORMAL: 'ปกติ · กินตามเกณฑ์ฟาร์ม',
-    LOW:    'กินน้อยกว่าเกณฑ์ · ตรวจสุขภาพ/น้ำ/อุณหภูมิ — เสี่ยงป่วย',
-    HIGH:   'กินเกินเกณฑ์ · เช็คการสิ้นเปลือง + recheck สูตร',
+  // ---------- Per-house day-by-day cards ----------
+  // One card per house with a compact daily table — every day shows
+  // g/bird vs farm STD + cumulative feed %; weighing days additionally
+  // show FCR. Sorted by overall status (worst first).
+  const RANK = { BAD: 2, WARN: 1, GOOD: 0 };
+  const BADGE = {
+    BAD:  { cls: 'crit',  text: '🚨 กินน้อยมาก' },
+    WARN: { cls: 'light', text: '⚠ มีวันกินน้อย' },
+    GOOD: { cls: 'ok',    text: '✓ กินตามเกณฑ์' },
   };
 
-  const STATUS_PILL  = { NORMAL: 'ok', LOW: 'crit', HIGH: 'cf' };
-  const STATUS_LABEL = { NORMAL: 'กินปกติ', LOW: 'กินน้อย', HIGH: 'กินมาก' };
+  const cards = [];
+  for (const fk of farmKeys) {
+    const farm = STATE.farms[fk];
+    for (const h of farm.houses) {
+      const fd = feedDailyHistory(h);
+      if (!fd) continue;
+      cards.push({ h, fd, farmKey: fk, farmName: farm.name });
+    }
+  }
+  cards.sort((a, b) => (RANK[b.fd.overall] || 0) - (RANK[a.fd.overall] || 0));
 
-  const rowsHtml = sorted.map((h, i) => {
-    const fc = getFarmClass(h.farmKey, farmKeys);
-    const rowCls = h.status === 'LOW' && h.dev <= -10 ? 'crit'
-                 : h.status === 'LOW' ? 'high' : '';
-    const devCls = h.status === 'LOW' ? 'pct-c'
-                 : h.status === 'HIGH' ? 'pct-w'
-                 : 'pct-o';
-    const devSign = h.dev >= 0 ? '+' : '';
+  const cardsHtml = cards.map(({ h, fd, farmKey, farmName }) => {
+    const fc = getFarmClass(farmKey, farmKeys);
+    const farmShort = escapeHtml(farmName.replace('ฟาร์ม',''));
+    const cardCls = fd.overall === 'BAD' ? 'card-bad'
+                  : fd.overall === 'WARN' ? 'card-warn' : 'card-good';
+    const badge = BADGE[fd.overall];
+    const rowsHtml = fd.rows.map(r => {
+      const dev = r.devPct;
+      const cellCls = r.status === 'LOW' ? 'pct-c'
+                    : r.status === 'HIGH' ? 'pct-w'
+                    : (r.status === 'NORMAL' ? 'pct-o' : '');
+      const sign = (dev != null && dev >= 0) ? '+' : '';
+      const devStr = dev != null ? `${sign}${dev.toFixed(0)}%` : '–';
+      const gStr = r.gPerBird != null ? r.gPerBird.toFixed(0) : '–';
+      const stdStr = r.stdG != null ? r.stdG.toFixed(0) : '–';
+      const feedStr = r.feedKg != null ? fmtNum(r.feedKg, 0) : '–';
+      const cumPctStr = r.cumFeedPct != null ? r.cumFeedPct.toFixed(1) + '%' : '–';
+      const fcrStr = (r.fcr != null && r.fcr > 0) ? `<b>${r.fcr.toFixed(2)}</b>` : '<span style="color:var(--ink-mute)">–</span>';
+      return `<tr>
+        <td class="mono"><b>Day ${r.day}</b></td>
+        <td class="mono">${feedStr}</td>
+        <td class="mono">${gStr}</td>
+        <td class="mono">${stdStr}</td>
+        <td class="mono ${cellCls}">${devStr}</td>
+        <td class="mono">${cumPctStr}</td>
+        <td class="mono">${fcrStr}</td>
+      </tr>`;
+    }).join('');
+    const fcrHeader = fd.lastFcr != null
+      ? `FCR ปัจจุบัน <b>${fd.lastFcr.toFixed(2)}</b> (Day ${fd.lastFcrDay})`
+      : 'ยังไม่มี FCR (รอวันชั่ง)';
+    const cumPctHeader = fd.cumFeedPct != null
+      ? `อาหารกินสะสม <b>${fd.cumFeedPct.toFixed(1)}%</b> ของแผน`
+      : '';
     return `
-      <tr class="${rowCls}">
-        <td><b>${i+1}</b></td>
-        <td><span class="pill ${fc}">${escapeHtml(h.farmName.replace('ฟาร์ม',''))}</span> <b>${h.house}</b></td>
-        <td class="mono">${h.age}</td>
-        <td class="mono">${fmtNum(h.qty_rem)}</td>
-        <td class="mono">${fmtNum(h.feed_day)}</td>
-        <td class="mono">${h.feedPerBird.toFixed(1)}</td>
-        <td class="mono">${h.stdFeed}</td>
-        <td class="pct ${devCls}">${devSign}${h.dev.toFixed(1)}%</td>
-        <td><span class="pill ${STATUS_PILL[h.status]}">${STATUS_LABEL[h.status]}</span></td>
-        <td style="font-size:11px; color:var(--ink-soft)">${ADVICE[h.status]}</td>
-      </tr>
-    `;
+      <div class="wk-card ${cardCls}">
+        <div class="wk-head">
+          <div class="wk-title">
+            <span class="pill ${fc}">${farmShort}</span>
+            <b>เล้า ${escapeHtml(String(h.house))}</b>
+            <span class="wk-age">อายุ ${h.age != null ? h.age : '–'} วัน · ${cumPctHeader} · ${fcrHeader}</span>
+          </div>
+          <span class="pill ${badge.cls}">${badge.text}</span>
+        </div>
+        <div class="wk-table-wrap">
+          <table class="wk-table">
+            <thead><tr>
+              <th>วันที่</th>
+              <th>อาหาร (kg)</th>
+              <th>g/ตัว/วัน</th>
+              <th>STD (g)</th>
+              <th>Δ%</th>
+              <th>%สะสม</th>
+              <th>FCR</th>
+            </tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
   }).join('');
-  document.getElementById('feed-tbody').innerHTML = rowsHtml ||
-    `<tr><td colspan="10" style="text-align:center; padding:24px; color:var(--ink-mute)">
-      ไม่มีข้อมูลอาหารที่คำนวณได้ — ไฟล์ Excel อาจไม่มีคอลัมน์ "อาหาร/วัน", "อายุ", หรือ "ยอดไก่คงเหลือ" ครบ
-     </td></tr>`;
+
+  document.getElementById('feed-cards').innerHTML = cardsHtml ||
+    `<div class="insight">ไม่มีข้อมูลอาหารรายวัน — ไฟล์ Excel ต้องมีชีท H 1...H N พร้อมคอลัมน์ "อาหารใช้จริง"</div>`;
   document.getElementById('cnt-feed').textContent = allHouses.length;
 }
 

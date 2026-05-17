@@ -223,6 +223,72 @@ function weeklyWeightAnalysis(h) {
   return { initial, rows, overall };
 }
 
+// Build the day-by-day feed breakdown the §03 card consumes.
+// For every day in the H-sheet history we compute:
+//   - feed_kg used that day
+//   - actual g/bird/day = (feed_kg * 1000) / qty_rem
+//   - farm-program STD g/bird/day at that age (FARM_FEED table)
+//   - deviation % vs STD (and a status tag LOW/NORMAL/HIGH at ±5 %)
+//   - cumulative feed eaten (kg) and cumulative planned feed (kg)
+//   - cumulative feed % vs plan
+//   - FCR on weighing days (passes through h.dailyHistory[i].fcr)
+// Returns null when no daily history is attached.
+function feedDailyHistory(h) {
+  if (!h.dailyHistory || h.dailyHistory.length === 0) return null;
+  const rows = [];
+  let cumFeedKg = 0;
+  let cumPlanKg = 0;
+  let lastFcr = null;
+  let lastFcrDay = null;
+  let lowDays = 0;
+  let highDays = 0;
+  let normalDays = 0;
+  for (const d of h.dailyHistory) {
+    const stdG = farmFeedLookup(d.day);
+    const planKg = (stdG != null && d.qty_rem) ? (stdG * d.qty_rem) / 1000 : null;
+    let gPerBird = null, devPct = null, status = null;
+    if (d.feed_used != null && d.qty_rem && d.qty_rem > 0) {
+      gPerBird = (d.feed_used * 1000) / d.qty_rem;
+      if (stdG && stdG > 0) {
+        devPct = ((gPerBird - stdG) / stdG) * 100;
+        status = devPct < -5 ? 'LOW' : devPct > 5 ? 'HIGH' : 'NORMAL';
+        if (status === 'LOW')  lowDays++;
+        if (status === 'HIGH') highDays++;
+        if (status === 'NORMAL') normalDays++;
+      }
+    }
+    if (d.feed_used != null) cumFeedKg += d.feed_used;
+    if (planKg != null)      cumPlanKg += planKg;
+    if (d.fcr != null && d.fcr > 0) { lastFcr = d.fcr; lastFcrDay = d.day; }
+    rows.push({
+      day: d.day,
+      feedKg: d.feed_used,
+      gPerBird,
+      stdG,
+      devPct,
+      status,
+      cumFeedKg,
+      cumPlanKg,
+      cumFeedPct: cumPlanKg > 0 ? (cumFeedKg / cumPlanKg) * 100 : null,
+      fcr: d.fcr,
+    });
+  }
+  // Overall card status: any day below -10% in the last week → bad,
+  // else watch if any LOW, else good.
+  const lastWeek = rows.slice(-7);
+  const recentBad = lastWeek.some(r => r.devPct != null && r.devPct < -10);
+  const recentLow = lastWeek.some(r => r.status === 'LOW');
+  const overall = recentBad ? 'BAD' : (recentLow ? 'WARN' : 'GOOD');
+  return {
+    rows,
+    cumFeedKg, cumPlanKg,
+    cumFeedPct: cumPlanKg > 0 ? (cumFeedKg / cumPlanKg) * 100 : null,
+    lastFcr, lastFcrDay,
+    lowDays, highDays, normalDays,
+    overall,
+  };
+}
+
 // ========== GROUP A · health & growth analyzers ==========
 
 // Water-to-feed ratio (liters water : kg feed). Broiler norm ≈ 1.5–2.4.

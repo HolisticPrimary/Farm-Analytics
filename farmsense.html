@@ -1192,7 +1192,8 @@ footer.colophon .footer-zone {
 .chart-demo-legend small { color: var(--ink-mute); font-size: 11px; }
 
 /* ============ 7C · WEEKLY WEIGHT / ADG / FCR CARDS ============ */
-.wk-cards {
+/* Same card style is reused by §03 (Feed day-by-day cards). */
+.wk-cards, .feed-cards {
   display: grid; gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
   margin-top: 6px;
@@ -1508,31 +1509,13 @@ footer.colophon .footer-zone {
 
     <!-- TAB: FEED -->
     <div class="tab-content" id="tab-feed">
-      <h2 class="sec"><span class="num">§ 03</span> อาหารแต่ละเล้า vs เกณฑ์ฟาร์ม</h2>
+      <h2 class="sec"><span class="num">§ 03</span> อาหาร vs เกณฑ์ฟาร์ม · รายวัน + FCR</h2>
       <div class="sec-rule"></div>
-      <p class="lede">เทียบ g/ตัว/วัน จริง กับ <b>เกณฑ์อาหารของฟาร์ม</b> (ไฟล์เกณฑ์.xlsx) · เล้า CRITICAL ที่กินน้อย &gt;20% มักเป็นไก่ป่วย</p>
+      <p class="lede">การ์ดละ 1 เล้า · ตารางรายวันแสดง <b>g/ตัว/วัน</b> เทียบเกณฑ์ฟาร์ม + <b>FCR</b> ทุกวันที่ชั่ง + <b>%อาหารกินสะสม</b> เทียบแผน</p>
 
       <div class="kpi-row" id="feed-kpi"></div>
 
-      <div class="table-wrap">
-        <table id="feed-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th class="sortable" data-sort="farm">ฟาร์ม/เล้า</th>
-              <th class="sortable" data-sort="age">อายุ</th>
-              <th class="sortable" data-sort="qty">ไก่คงเหลือ</th>
-              <th>อาหาร/วัน (kg)</th>
-              <th>g/ตัว/วัน</th>
-              <th>เกณฑ์ฟาร์ม (g)</th>
-              <th class="sortable" data-sort="dev">ส่วนต่าง</th>
-              <th>สถานะ</th>
-              <th>คำแนะนำ</th>
-            </tr>
-          </thead>
-          <tbody id="feed-tbody"></tbody>
-        </table>
-      </div>
+      <div id="feed-cards" class="feed-cards"></div>
     </div>
 
     <!-- TAB: ENVIRONMENT -->
@@ -2283,6 +2266,72 @@ function weeklyWeightAnalysis(h) {
   else                               overall = 'GOOD';
 
   return { initial, rows, overall };
+}
+
+// Build the day-by-day feed breakdown the §03 card consumes.
+// For every day in the H-sheet history we compute:
+//   - feed_kg used that day
+//   - actual g/bird/day = (feed_kg * 1000) / qty_rem
+//   - farm-program STD g/bird/day at that age (FARM_FEED table)
+//   - deviation % vs STD (and a status tag LOW/NORMAL/HIGH at ±5 %)
+//   - cumulative feed eaten (kg) and cumulative planned feed (kg)
+//   - cumulative feed % vs plan
+//   - FCR on weighing days (passes through h.dailyHistory[i].fcr)
+// Returns null when no daily history is attached.
+function feedDailyHistory(h) {
+  if (!h.dailyHistory || h.dailyHistory.length === 0) return null;
+  const rows = [];
+  let cumFeedKg = 0;
+  let cumPlanKg = 0;
+  let lastFcr = null;
+  let lastFcrDay = null;
+  let lowDays = 0;
+  let highDays = 0;
+  let normalDays = 0;
+  for (const d of h.dailyHistory) {
+    const stdG = farmFeedLookup(d.day);
+    const planKg = (stdG != null && d.qty_rem) ? (stdG * d.qty_rem) / 1000 : null;
+    let gPerBird = null, devPct = null, status = null;
+    if (d.feed_used != null && d.qty_rem && d.qty_rem > 0) {
+      gPerBird = (d.feed_used * 1000) / d.qty_rem;
+      if (stdG && stdG > 0) {
+        devPct = ((gPerBird - stdG) / stdG) * 100;
+        status = devPct < -5 ? 'LOW' : devPct > 5 ? 'HIGH' : 'NORMAL';
+        if (status === 'LOW')  lowDays++;
+        if (status === 'HIGH') highDays++;
+        if (status === 'NORMAL') normalDays++;
+      }
+    }
+    if (d.feed_used != null) cumFeedKg += d.feed_used;
+    if (planKg != null)      cumPlanKg += planKg;
+    if (d.fcr != null && d.fcr > 0) { lastFcr = d.fcr; lastFcrDay = d.day; }
+    rows.push({
+      day: d.day,
+      feedKg: d.feed_used,
+      gPerBird,
+      stdG,
+      devPct,
+      status,
+      cumFeedKg,
+      cumPlanKg,
+      cumFeedPct: cumPlanKg > 0 ? (cumFeedKg / cumPlanKg) * 100 : null,
+      fcr: d.fcr,
+    });
+  }
+  // Overall card status: any day below -10% in the last week → bad,
+  // else watch if any LOW, else good.
+  const lastWeek = rows.slice(-7);
+  const recentBad = lastWeek.some(r => r.devPct != null && r.devPct < -10);
+  const recentLow = lastWeek.some(r => r.status === 'LOW');
+  const overall = recentBad ? 'BAD' : (recentLow ? 'WARN' : 'GOOD');
+  return {
+    rows,
+    cumFeedKg, cumPlanKg,
+    cumFeedPct: cumPlanKg > 0 ? (cumFeedKg / cumPlanKg) * 100 : null,
+    lastFcr, lastFcrDay,
+    lowDays, highDays, normalDays,
+    overall,
+  };
 }
 
 // ========== GROUP A · health & growth analyzers ==========
@@ -3669,59 +3718,91 @@ function renderFeed(farmKeys) {
   `;
   document.getElementById('feed-kpi').innerHTML = feedKpi;
 
-  const sorted = [...allHouses].sort((a, b) => {
-    let va, vb;
-    if (feedSort.col === 'dev') { va = a.dev; vb = b.dev; }
-    else if (feedSort.col === 'age') { va = a.age; vb = b.age; }
-    else if (feedSort.col === 'qty') { va = a.qty_rem||0; vb = b.qty_rem||0; }
-    else if (feedSort.col === 'farm') { va = a.farmName||''; vb = b.farmName||''; return feedSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va); }
-    else { va = 0; vb = 0; }
-    return feedSort.dir === 'asc' ? va - vb : vb - va;
-  });
-
-  document.querySelectorAll('#feed-table thead th.sortable').forEach(th => {
-    th.classList.remove('sorted-asc','sorted-desc');
-    if (th.dataset.sort === feedSort.col) {
-      th.classList.add(feedSort.dir === 'asc' ? 'sorted-asc' : 'sorted-desc');
-    }
-  });
-
-  const ADVICE = {
-    NORMAL: 'ปกติ · กินตามเกณฑ์ฟาร์ม',
-    LOW:    'กินน้อยกว่าเกณฑ์ · ตรวจสุขภาพ/น้ำ/อุณหภูมิ — เสี่ยงป่วย',
-    HIGH:   'กินเกินเกณฑ์ · เช็คการสิ้นเปลือง + recheck สูตร',
+  // ---------- Per-house day-by-day cards ----------
+  // One card per house with a compact daily table — every day shows
+  // g/bird vs farm STD + cumulative feed %; weighing days additionally
+  // show FCR. Sorted by overall status (worst first).
+  const RANK = { BAD: 2, WARN: 1, GOOD: 0 };
+  const BADGE = {
+    BAD:  { cls: 'crit',  text: '🚨 กินน้อยมาก' },
+    WARN: { cls: 'light', text: '⚠ มีวันกินน้อย' },
+    GOOD: { cls: 'ok',    text: '✓ กินตามเกณฑ์' },
   };
 
-  const STATUS_PILL  = { NORMAL: 'ok', LOW: 'crit', HIGH: 'cf' };
-  const STATUS_LABEL = { NORMAL: 'กินปกติ', LOW: 'กินน้อย', HIGH: 'กินมาก' };
+  const cards = [];
+  for (const fk of farmKeys) {
+    const farm = STATE.farms[fk];
+    for (const h of farm.houses) {
+      const fd = feedDailyHistory(h);
+      if (!fd) continue;
+      cards.push({ h, fd, farmKey: fk, farmName: farm.name });
+    }
+  }
+  cards.sort((a, b) => (RANK[b.fd.overall] || 0) - (RANK[a.fd.overall] || 0));
 
-  const rowsHtml = sorted.map((h, i) => {
-    const fc = getFarmClass(h.farmKey, farmKeys);
-    const rowCls = h.status === 'LOW' && h.dev <= -10 ? 'crit'
-                 : h.status === 'LOW' ? 'high' : '';
-    const devCls = h.status === 'LOW' ? 'pct-c'
-                 : h.status === 'HIGH' ? 'pct-w'
-                 : 'pct-o';
-    const devSign = h.dev >= 0 ? '+' : '';
+  const cardsHtml = cards.map(({ h, fd, farmKey, farmName }) => {
+    const fc = getFarmClass(farmKey, farmKeys);
+    const farmShort = escapeHtml(farmName.replace('ฟาร์ม',''));
+    const cardCls = fd.overall === 'BAD' ? 'card-bad'
+                  : fd.overall === 'WARN' ? 'card-warn' : 'card-good';
+    const badge = BADGE[fd.overall];
+    const rowsHtml = fd.rows.map(r => {
+      const dev = r.devPct;
+      const cellCls = r.status === 'LOW' ? 'pct-c'
+                    : r.status === 'HIGH' ? 'pct-w'
+                    : (r.status === 'NORMAL' ? 'pct-o' : '');
+      const sign = (dev != null && dev >= 0) ? '+' : '';
+      const devStr = dev != null ? `${sign}${dev.toFixed(0)}%` : '–';
+      const gStr = r.gPerBird != null ? r.gPerBird.toFixed(0) : '–';
+      const stdStr = r.stdG != null ? r.stdG.toFixed(0) : '–';
+      const feedStr = r.feedKg != null ? fmtNum(r.feedKg, 0) : '–';
+      const cumPctStr = r.cumFeedPct != null ? r.cumFeedPct.toFixed(1) + '%' : '–';
+      const fcrStr = (r.fcr != null && r.fcr > 0) ? `<b>${r.fcr.toFixed(2)}</b>` : '<span style="color:var(--ink-mute)">–</span>';
+      return `<tr>
+        <td class="mono"><b>Day ${r.day}</b></td>
+        <td class="mono">${feedStr}</td>
+        <td class="mono">${gStr}</td>
+        <td class="mono">${stdStr}</td>
+        <td class="mono ${cellCls}">${devStr}</td>
+        <td class="mono">${cumPctStr}</td>
+        <td class="mono">${fcrStr}</td>
+      </tr>`;
+    }).join('');
+    const fcrHeader = fd.lastFcr != null
+      ? `FCR ปัจจุบัน <b>${fd.lastFcr.toFixed(2)}</b> (Day ${fd.lastFcrDay})`
+      : 'ยังไม่มี FCR (รอวันชั่ง)';
+    const cumPctHeader = fd.cumFeedPct != null
+      ? `อาหารกินสะสม <b>${fd.cumFeedPct.toFixed(1)}%</b> ของแผน`
+      : '';
     return `
-      <tr class="${rowCls}">
-        <td><b>${i+1}</b></td>
-        <td><span class="pill ${fc}">${escapeHtml(h.farmName.replace('ฟาร์ม',''))}</span> <b>${h.house}</b></td>
-        <td class="mono">${h.age}</td>
-        <td class="mono">${fmtNum(h.qty_rem)}</td>
-        <td class="mono">${fmtNum(h.feed_day)}</td>
-        <td class="mono">${h.feedPerBird.toFixed(1)}</td>
-        <td class="mono">${h.stdFeed}</td>
-        <td class="pct ${devCls}">${devSign}${h.dev.toFixed(1)}%</td>
-        <td><span class="pill ${STATUS_PILL[h.status]}">${STATUS_LABEL[h.status]}</span></td>
-        <td style="font-size:11px; color:var(--ink-soft)">${ADVICE[h.status]}</td>
-      </tr>
-    `;
+      <div class="wk-card ${cardCls}">
+        <div class="wk-head">
+          <div class="wk-title">
+            <span class="pill ${fc}">${farmShort}</span>
+            <b>เล้า ${escapeHtml(String(h.house))}</b>
+            <span class="wk-age">อายุ ${h.age != null ? h.age : '–'} วัน · ${cumPctHeader} · ${fcrHeader}</span>
+          </div>
+          <span class="pill ${badge.cls}">${badge.text}</span>
+        </div>
+        <div class="wk-table-wrap">
+          <table class="wk-table">
+            <thead><tr>
+              <th>วันที่</th>
+              <th>อาหาร (kg)</th>
+              <th>g/ตัว/วัน</th>
+              <th>STD (g)</th>
+              <th>Δ%</th>
+              <th>%สะสม</th>
+              <th>FCR</th>
+            </tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+        </div>
+      </div>`;
   }).join('');
-  document.getElementById('feed-tbody').innerHTML = rowsHtml ||
-    `<tr><td colspan="10" style="text-align:center; padding:24px; color:var(--ink-mute)">
-      ไม่มีข้อมูลอาหารที่คำนวณได้ — ไฟล์ Excel อาจไม่มีคอลัมน์ "อาหาร/วัน", "อายุ", หรือ "ยอดไก่คงเหลือ" ครบ
-     </td></tr>`;
+
+  document.getElementById('feed-cards').innerHTML = cardsHtml ||
+    `<div class="insight">ไม่มีข้อมูลอาหารรายวัน — ไฟล์ Excel ต้องมีชีท H 1...H N พร้อมคอลัมน์ "อาหารใช้จริง"</div>`;
   document.getElementById('cnt-feed').textContent = allHouses.length;
 }
 
@@ -6066,14 +6147,7 @@ document.querySelectorAll('#mort-table thead th.sortable').forEach(th => {
   };
 });
 
-document.querySelectorAll('#feed-table thead th.sortable').forEach(th => {
-  th.onclick = () => {
-    const col = th.dataset.sort;
-    if (feedSort.col === col) feedSort.dir = feedSort.dir === 'asc' ? 'desc' : 'asc';
-    else { feedSort.col = col; feedSort.dir = 'asc'; }
-    renderFeed(Object.keys(STATE.farms));
-  };
-});
+// (Feed sort handlers removed — §03 is now a card grid, not a table.)
 
 // ========== PRICE / ENV INPUT HANDLERS ==========
 

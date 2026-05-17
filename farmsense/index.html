@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css?v=20260516p">
+<link rel="stylesheet" href="css/styles.css?v=20260516q">
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -164,31 +164,13 @@
 
     <!-- TAB: FEED -->
     <div class="tab-content" id="tab-feed">
-      <h2 class="sec"><span class="num">§ 03</span> อาหารแต่ละเล้า vs เกณฑ์ฟาร์ม</h2>
+      <h2 class="sec"><span class="num">§ 03</span> อาหาร vs เกณฑ์ฟาร์ม · รายวัน + FCR</h2>
       <div class="sec-rule"></div>
-      <p class="lede">เทียบ g/ตัว/วัน จริง กับ <b>เกณฑ์อาหารของฟาร์ม</b> (ไฟล์เกณฑ์.xlsx) · เล้า CRITICAL ที่กินน้อย &gt;20% มักเป็นไก่ป่วย</p>
+      <p class="lede">การ์ดละ 1 เล้า · ตารางรายวันแสดง <b>g/ตัว/วัน</b> เทียบเกณฑ์ฟาร์ม + <b>FCR</b> ทุกวันที่ชั่ง + <b>%อาหารกินสะสม</b> เทียบแผน</p>
 
       <div class="kpi-row" id="feed-kpi"></div>
 
-      <div class="table-wrap">
-        <table id="feed-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th class="sortable" data-sort="farm">ฟาร์ม/เล้า</th>
-              <th class="sortable" data-sort="age">อายุ</th>
-              <th class="sortable" data-sort="qty">ไก่คงเหลือ</th>
-              <th>อาหาร/วัน (kg)</th>
-              <th>g/ตัว/วัน</th>
-              <th>เกณฑ์ฟาร์ม (g)</th>
-              <th class="sortable" data-sort="dev">ส่วนต่าง</th>
-              <th>สถานะ</th>
-              <th>คำแนะนำ</th>
-            </tr>
-          </thead>
-          <tbody id="feed-tbody"></tbody>
-        </table>
-      </div>
+      <div id="feed-cards" class="feed-cards"></div>
     </div>
 
     <!-- TAB: ENVIRONMENT -->
@@ -398,21 +380,21 @@
 </main>
 
 <!-- ====== Application scripts (load order matters) ====== -->
-<script src="js/constants.js?v=20260516p"></script>
-<script src="js/state.js?v=20260516p"></script>
-<script src="js/ui-helpers.js?v=20260516p"></script>
-<script src="js/analyzers.js?v=20260516p"></script>
-<script src="js/analyzers-alerts.js?v=20260516p"></script>
-<script src="js/schema-map.js?v=20260516p"></script>
-<script src="js/history.js?v=20260516p"></script>
-<script src="js/parser.js?v=20260516p"></script>
-<script src="js/render.js?v=20260516p"></script>
-<script src="js/render-health.js?v=20260516p"></script>
-<script src="js/render-alerts.js?v=20260516p"></script>
-<script src="js/render-analysis.js?v=20260516p"></script>
-<script src="js/render-history.js?v=20260516p"></script>
-<script src="js/exports.js?v=20260516p"></script>
-<script src="js/main.js?v=20260516p"></script>
+<script src="js/constants.js?v=20260516q"></script>
+<script src="js/state.js?v=20260516q"></script>
+<script src="js/ui-helpers.js?v=20260516q"></script>
+<script src="js/analyzers.js?v=20260516q"></script>
+<script src="js/analyzers-alerts.js?v=20260516q"></script>
+<script src="js/schema-map.js?v=20260516q"></script>
+<script src="js/history.js?v=20260516q"></script>
+<script src="js/parser.js?v=20260516q"></script>
+<script src="js/render.js?v=20260516q"></script>
+<script src="js/render-health.js?v=20260516q"></script>
+<script src="js/render-alerts.js?v=20260516q"></script>
+<script src="js/render-analysis.js?v=20260516q"></script>
+<script src="js/render-history.js?v=20260516q"></script>
+<script src="js/exports.js?v=20260516q"></script>
+<script src="js/main.js?v=20260516q"></script>
 
 </body>
 </html>

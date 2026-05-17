@@ -1176,7 +1176,8 @@ footer.colophon .footer-zone {
 .chart-demo-legend small { color: var(--ink-mute); font-size: 11px; }
 
 /* ============ 7C · WEEKLY WEIGHT / ADG / FCR CARDS ============ */
-.wk-cards {
+/* Same card style is reused by §03 (Feed day-by-day cards). */
+.wk-cards, .feed-cards {
   display: grid; gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
   margin-top: 6px;
